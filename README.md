@@ -21,7 +21,7 @@
 
 ### [✅ Prueba de integración con Moodle 4.5 realizada: ver informe](docs/prueba-integracion-moodle/)
 
-<sub>16-10-2026 · ida y vuelta con un Moodle 4.5 real (ambiente QA en Google Cloud Run) · 9 de 9 preguntas reconocidas · notas idénticas · sin datos personales</sub>
+<sub>16-10-2026 · ida y vuelta con un Moodle 4.5 real (ambiente QA en Google Cloud Run) · 9 de 9 preguntas reconocidas · notas idénticas · sin datos personales · [descargar evidencia (.zip)](docs/prueba-integracion-moodle/prueba-integracion-banco-moodle.zip)</sub>
 
 <br>
 

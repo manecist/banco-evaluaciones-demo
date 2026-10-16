@@ -2,6 +2,10 @@
 
 Prueba de punta a punta entre el **Banco de Evaluaciones** y un **Moodle 4.5 real**: la prueba sale del banco, se rinde en Moodle y los resultados vuelven al banco para el análisis.
 
+> [!NOTE]
+> ✅ **Esta prueba ya se realizó el 16-10-2026** con un Moodle 4.5 real (ambiente QA en Google Cloud Run): 9 de 9 preguntas reconocidas y notas idénticas entre Moodle y el banco.
+> [Ver el informe](docs/prueba-integracion-moodle/) · [descargar la evidencia (.zip)](docs/prueba-integracion-moodle/prueba-integracion-banco-moodle.zip)
+
 > [!IMPORTANT]
 > - Hágala en el ambiente **QA** del aula, no en Producción.
 > - Use **solo usuarios de prueba con datos ficticios**.

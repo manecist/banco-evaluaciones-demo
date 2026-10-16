@@ -1,0 +1,21 @@
+{
+  "name": "banco-evaluaciones-demo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Demo técnico de Studios Conari: Banco de Evaluaciones (TypeScript · Node.js · React · PostgreSQL)",
+  "workspaces": ["packages/core", "packages/server", "packages/client"],
+  "scripts": {
+    "typecheck": "tsc -p packages/core && tsc -p packages/server && tsc -p packages/client",
+    "test": "vitest run",
+    "dev:server": "npm run dev -w @banco/server",
+    "dev:client": "npm run dev -w @banco/client",
+    "build:demo": "npm run build:demo -w @banco/client",
+    "openapi": "npm run openapi -w @banco/server"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  },
+  "engines": { "node": ">=20" },
+  "license": "SEE LICENSE IN LICENSE"
+}

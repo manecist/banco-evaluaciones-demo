@@ -1,0 +1,16 @@
+Copyright (c) 2026 Studios Conari SpA (RUT 78.465.252-1). Todos los derechos reservados.
+
+Este repositorio se publica únicamente para su revisión y evaluación como demostración
+técnica de Studios Conari SpA.
+
+No se otorga ninguna licencia ni permiso para usar, copiar, modificar, fusionar, publicar,
+distribuir, sublicenciar, vender ni crear obras derivadas de este código, su documentación
+o cualquiera de sus partes, total o parcialmente, sin la autorización previa y por escrito
+de Studios Conari SpA.
+
+Ver el contenido en GitHub no implica autorización de uso. Para solicitar permisos,
+escriba a studiosconari@gmail.com.
+
+Los componentes de terceros que este proyecto utiliza (React, Node.js, Express, PostgreSQL,
+PGlite, Zod, Vite y otros) se rigen por sus propias licencias y no forman parte de esta
+reserva de derechos.

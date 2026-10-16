@@ -1,0 +1,16 @@
+{
+  "name": "@banco/core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "zod": "4.6.7",
+    "@electric-sql/pglite": "0.5.10"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./pglite": "./src/adapters/pglite.ts"
+  }
+}

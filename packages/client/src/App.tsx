@@ -9,6 +9,8 @@ import { InstrumentsView, InstrumentView, NewInstrumentView } from "./views/Inst
 import { AnalysisView } from "./views/Analysis";
 import { AboutView, AiView, AuditView } from "./views/Other";
 import { CareerView, SettingsView } from "./views/Roles";
+import { ImportView } from "./views/Import";
+import { SheetsView } from "./views/Sheets";
 
 const DEMO = import.meta.env.MODE === "demo";
 let apiPromise: Promise<Api> | null = null;
@@ -76,8 +78,8 @@ export function App() {
   const ctx: Ctx = { api, user, catalog, can: makeCan(user), go: setView, toast };
   const nav: { label: string; v: View; show: boolean; active: boolean }[] = [
     { label: "Panel de carrera", v: { name: "career" }, show: ctx.can("career:dashboard"), active: view.name === "career" },
-    { label: "Banco de ítems", v: { name: "items" }, show: true, active: ["items", "item", "edit"].includes(view.name) },
-    { label: "Instrumentos", v: { name: "instruments" }, show: true, active: ["instruments", "instrument", "new-instrument", "analysis"].includes(view.name) },
+    { label: "Banco de ítems", v: { name: "items" }, show: true, active: ["items", "item", "edit", "import"].includes(view.name) },
+    { label: "Instrumentos", v: { name: "instruments" }, show: true, active: ["instruments", "instrument", "new-instrument", "analysis", "sheets"].includes(view.name) },
     { label: "Asistente IA", v: { name: "ai" }, show: ctx.can("ai:use"), active: view.name === "ai" },
     { label: "Configuración", v: { name: "settings" }, show: ctx.can("settings:pedagogic") || ctx.can("settings:technical"), active: view.name === "settings" },
     { label: "Auditoría", v: { name: "audit" }, show: ctx.can("audit:read"), active: view.name === "audit" },
@@ -112,6 +114,8 @@ export function App() {
           {view.name === "about" && <AboutView />}
           {view.name === "career" && <CareerView />}
           {view.name === "settings" && <SettingsView />}
+          {view.name === "import" && <ImportView />}
+          {view.name === "sheets" && <SheetsView id={view.id} />}
         </main>
         {toastMsg && <div className={`toast ${toastMsg.kind}`} role="status">{toastMsg.msg}</div>}
       </div>

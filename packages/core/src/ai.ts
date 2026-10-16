@@ -118,6 +118,12 @@ export const aiReviewSchema = z.object({
   comment: z.string().min(1),
   observations: z.array(z.string().min(1)).max(8),
   suggestedStem: z.string().min(10).optional(),
+  /** Respuesta que la IA considera correcta, con su fundamento. Es una opinión: no cambia la clave. */
+  aiAnswer: z.object({
+    letter: z.string().max(1).nullable(),
+    justification: z.string().min(1),
+    agreesWithKey: z.boolean().nullable(),
+  }).optional(),
 });
 export type AiReview = z.infer<typeof aiReviewSchema>;
 
@@ -159,8 +165,33 @@ const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,
 const words = (s: string) => new Set(norm(s).match(/[a-zñ0-9]{4,}/g) ?? []);
 
 /**
+ * Base de conocimiento de ejemplo del revisor SIMULADO (solo para los temas del
+ * demo). Con un proveedor real, el modelo de lenguaje responde cualquier tema.
+ */
+const DEMO_KNOWLEDGE: { topic: RegExp[]; answer: RegExp; why: string }[] = [
+  { topic: [/presion arterial/, /brazo/], answer: /altura del corazon/, why: "El brazo debe quedar apoyado a la altura del corazón: si cuelga, la presión se sobreestima; si se eleva, se subestima." },
+  { topic: [/frecuencia respiratoria/, /adulto/], answer: /12 a 20/, why: "En un adulto en reposo, la frecuencia respiratoria normal es de 12 a 20 respiraciones por minuto." },
+  { topic: [/frecuencia cardiaca/, /adulto/], answer: /60 a 100/, why: "En un adulto en reposo, la frecuencia cardiaca normal es de 60 a 100 latidos por minuto." },
+  { topic: [/temperatura/, /normal/], answer: /36[,.]5/, why: "La temperatura corporal normal de un adulto es cercana a 36,5 °C (axilar entre 36 y 37 °C)." },
+  { topic: [/39/, /temperatura|fiebre/], answer: /informar/, why: "Ante fiebre, el técnico registra el valor e informa de inmediato a la enfermera; no administra fármacos sin indicación." },
+  { topic: [/higiene de manos/, /\bno\b/, /oms/], answer: /sala de estar/, why: "Los cinco momentos de la OMS ocurren en la atención del paciente; entrar a la sala de estar sin contacto previo no es uno de ellos." },
+  { topic: [/gotitas/], answer: /mascarilla quirurgica/, why: "En el aislamiento por gotitas, la mascarilla quirúrgica es imprescindible a menos de un metro del paciente." },
+  { topic: [/solucion alcoholica/], answer: /20 a 30/, why: "La higiene de manos con solución alcohólica dura entre 20 y 30 segundos." },
+  { topic: [/retiro/, /proteccion personal/], answer: /^guantes, pechera/, why: "Se retira primero lo más contaminado (guantes y pechera) y al final la protección de la cara, con higiene de manos al terminar." },
+];
+
+/** Si el enunciado pide convertir latidos contados en 15 segundos a latidos por minuto, lo calcula. */
+function pulseCalculation(stem: string): { value: number; why: string } | null {
+  const m = /(\d+)\s*latidos/.exec(stem);
+  if (!m || !/15 segundos/.test(stem)) return null;
+  const v = Number(m[1]) * 4;
+  return { value: v, why: `${m[1]} latidos en 15 segundos × 4 = ${v} latidos por minuto.` };
+}
+
+/**
  * Revisor simulado: aplica comprobaciones de forma sobre la clave y los
- * distractores. Un modelo real además opina sobre el contenido técnico.
+ * distractores y, para los temas del demo, opina qué alternativa es correcta.
+ * Un modelo real hace lo mismo para cualquier contenido.
  */
 export const simulatedReviewer: AiReviewer = {
   name: "simulado",
@@ -195,6 +226,27 @@ export const simulatedReviewer: AiReviewer = {
     if (others.some((o) => norm(o.text) && (norm(key.text).includes(norm(o.text)) || norm(o.text).includes(norm(key.text))))) {
       obs.push("Una alternativa incorrecta está contenida en la correcta (o al revés): podría haber dos respuestas válidas.");
     }
+    // Opinión sobre el contenido: qué alternativa cree correcta la IA.
+    const nStem = norm(req.stem);
+    const letterOf = (a: { text: string }) => "ABCDEF"[req.alternatives.indexOf(a as (typeof req.alternatives)[number])] ?? null;
+    const keyLetter = letterOf(key);
+    let aiAnswer: { letter: string | null; justification: string; agreesWithKey: boolean | null };
+    const calc = pulseCalculation(nStem);
+    const kb = DEMO_KNOWLEDGE.find((k) => k.topic.every((t) => t.test(nStem)));
+    const pick = calc
+      ? { alt: alts.find((a) => new RegExp(`\\b${calc.value}\\b`).test(norm(a.text))), why: calc.why }
+      : kb ? { alt: alts.find((a) => kb.answer.test(norm(a.text))), why: kb.why } : null;
+    if (pick?.alt) {
+      const letter = letterOf(pick.alt);
+      aiAnswer = { letter, justification: pick.why, agreesWithKey: letter === keyLetter };
+      if (letter !== keyLetter) obs.unshift(`La IA cree que la respuesta correcta es la ${letter}, no la ${keyLetter} marcada. ${pick.why} Revise o consulte a un experto.`);
+    } else if (pick) {
+      aiAnswer = { letter: null, justification: `${pick.why} Ninguna alternativa coincide con eso: revise las opciones.`, agreesWithKey: false };
+      obs.unshift("La respuesta que la IA considera correcta no aparece entre las alternativas.");
+    } else {
+      aiAnswer = { letter: null, justification: "La IA simulada del demo no tiene información sobre este tema. Con un proveedor real, un modelo de lenguaje propone la respuesta y su fundamento.", agreesWithKey: null };
+    }
+
     const m = /^¿\s*cu[aá]l(?:es)?\s+(?:es|son)\s+(.+?)\?*$/i.exec(req.stem.trim());
     const suggestedStem = m ? `Identifique ${m[1]!.replace(/\?$/, "")}.` : undefined;
     return {
@@ -203,6 +255,7 @@ export const simulatedReviewer: AiReviewer = {
         ? "Revise las observaciones antes de enviar la pregunta. La respuesta correcta la sigue decidiendo usted."
         : "No se detectan problemas de forma en la clave ni en las alternativas.",
       observations: obs,
+      aiAnswer,
       ...(suggestedStem ? { suggestedStem } : {}),
     };
   },

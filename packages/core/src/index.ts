@@ -3,6 +3,8 @@ export * from "./permissions";
 export * from "./advisor";
 export * from "./analysis";
 export * from "./grading";
+export * from "./sheets";
+export * from "./legacy";
 export * from "./moodle";
 export * from "./ai";
 export * from "./repo";

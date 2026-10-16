@@ -43,6 +43,8 @@ describe("asesor por reglas", () => {
       },
     });
     const rules = s.map((x) => x.rule);
+    expect(s.find((x) => x.rule === "nivel_por_verbo")?.fix?.bloomLevel).toBe(1);
+    expect(s.every((x) => x.howTo.length > 0)).toBe(true);
     expect(rules).toContain("nivel_por_verbo");
     expect(rules).toContain("absolutos");
     expect(rules).toContain("clave_mas_larga");
@@ -128,4 +130,27 @@ describe("segunda opinión de IA", () => {
     });
     expect(r.keyAssessment).toBe("coherente");
   });
+  it("opina qué alternativa es correcta y avisa si no coincide con la clave", async () => {
+    const alternatives = [
+      { text: "66 latidos por minuto", correct: true },
+      { text: "88 latidos por minuto", correct: false },
+      { text: "96 latidos por minuto", correct: false },
+    ];
+    const r = await reviewItem(simulatedReviewer, { stem: "Calcule la frecuencia de pulso si en 15 segundos se cuentan 22 latidos.", alternatives });
+    expect(r.aiAnswer).toMatchObject({ letter: "B", agreesWithKey: false });
+    expect(r.keyAssessment).toBe("dudosa");
+    const ok = await reviewItem(simulatedReviewer, { stem: "¿Cuál es la temperatura normal del cuerpo?", alternatives: [{ text: "36,5 °C", correct: true }, { text: "40 °C", correct: false }, { text: "34 °C", correct: false }] });
+    expect(ok.aiAnswer).toMatchObject({ letter: "A", agreesWithKey: true });
+  });
 });
+
+describe("soluciones del asesor", () => {
+  it("propone reescrituras aplicables", () => {
+    const alternatives = [{ text: "A", correct: true, feedback: "x" }, { text: "B", correct: false, feedback: "x" }, { text: "C", correct: false, feedback: "x" }];
+    const a = adviseItem({ stem: "¿Cuál es la temperatura normal del cuerpo de un adulto?", bloomLevel: 1, difficulty: 2, payload: { type: "seleccion_multiple", alternatives } });
+    expect(a.find((x) => x.rule === "sin_verbo")?.fix?.stem).toBe("Identifique la temperatura normal del cuerpo de un adulto.");
+    const b = adviseItem({ stem: "Un paciente tiene fiebre de 39 °C. Nunca se debe esperar. Identifique qué hacer primero.", bloomLevel: 1, difficulty: 2, payload: { type: "seleccion_multiple", alternatives } });
+    expect(b.find((x) => x.rule === "absolutos")?.fix?.stem).toBe("Un paciente tiene fiebre de 39 °C. Identifique qué hacer primero.");
+  });
+});
+

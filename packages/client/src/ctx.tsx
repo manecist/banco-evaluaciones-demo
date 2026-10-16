@@ -23,7 +23,9 @@ export type View =
   | { name: "audit" }
   | { name: "about" }
   | { name: "career" }
-  | { name: "settings" };
+  | { name: "settings" }
+  | { name: "import" }
+  | { name: "sheets"; id: number };
 
 export const AppCtx = createContext<Ctx | null>(null);
 export const useApp = () => useContext(AppCtx)!;
@@ -71,7 +73,7 @@ export const ROLE_DESC: Record<string, string> = {
   docente: "Escribe preguntas y arma pruebas.",
   revisor: "Revisa las preguntas y las aprueba o devuelve.",
   area_curricular: "Cuida la calidad: programas, reglas, revisión y archivo.",
-  jefatura: "Supervisa su carrera: preguntas disponibles, pendientes y alertas.",
+  jefatura: "Supervisa su carrera y atiende consultas a experto cuando se necesitan.",
   uta: "Asesora en evaluación: define la exigencia y las reglas del análisis.",
   admin: "Mantiene el sistema: IA, límites de uso y usuarios.",
 };

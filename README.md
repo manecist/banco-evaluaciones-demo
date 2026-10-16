@@ -35,9 +35,13 @@ TypeScript · Node.js · API REST + OpenAPI · React · PostgreSQL 16 · Docker 
 | **Análisis de ítems** | Dificultad (p), discriminación (D, grupos 27 % superior e inferior), punto biserial corregida, alertas con prioridad y distribución de alternativas por grupo alto y bajo. Usa 64 respuestas simuladas. |
 | **Asistente de IA** | Genera borradores a partir de un resultado de aprendizaje. Antes de enviar el texto elimina RUT, correos y teléfonos; valida la respuesta contra un esquema; los borradores quedan marcados y pasan por la misma visación humana. En el demo el proveedor es **simulado**, sin costo y sin llamadas externas. |
 | **Segunda opinión de IA** | El docente, y también la revisora (que puede no ser experta en la materia), piden a la IA que revise la pregunta: avisa si la respuesta marcada se ve dudosa, si hay dos opciones válidas o si las incorrectas no son creíbles. **Nunca elige ni cambia la respuesta correcta**: decide una persona. |
+| **Asesor con soluciones** | Cada consejo explica cómo corregirlo y, cuando se puede, ofrece la corrección con un clic (por ejemplo, reescribir el enunciado con un verbo o ajustar el nivel de Bloom). |
+| **Consulta a par experto** | Si la revisora duda del contenido o discrepa con el docente, pide la opinión de un experto. La jefatura de carrera solo interviene entonces: responde o asigna a alguien de la especialidad. Mientras la consulta está abierta no se puede visar, y la opinión queda registrada. |
+| **Importar pruebas antiguas** | El docente sube una prueba que ya tiene (papel escaneado, Word o PDF); el texto se separa en preguntas, alternativas y respuesta correcta, el docente confirma y entran como borradores. En el demo, el reconocimiento de texto está simulado con un ejemplo y los archivos de texto se leen directamente. |
+| **Corrección de hojas de respuesta** | Hoja de respuestas imprimible para lector óptico. Se sube el archivo de marcas (o una exportación de Moodle) y el sistema corrige por forma, calcula notas, avisa qué hojas revisar a mano (doble marca, en blanco), descarga las notas y alimenta el análisis de ítems. |
 | **Ayuda para revisar** | La revisora ve una pauta de revisión, lo que detectó el asesor automático y la segunda opinión de IA. Si el tema no es de su especialidad, la pauta indica devolver la pregunta pidiendo un par experto. |
 | **Roles con función propia** | **Jefatura:** panel de su carrera (preguntas aprobadas por asignatura, pendientes y pruebas con alertas). **UTA:** ajustes pedagógicos (exigencia, tolerancia, respuestas mínimas). **Administración:** ajustes técnicos (IA y límites) y usuarios y roles. Cada ajuste solo lo cambia su rol, verificado en el servidor. |
-| **Roles y auditoría** | Seis roles (docente, jefatura de carrera, revisor/a, Área Curricular, UTA, administración) con una matriz de permisos aplicada en cada ruta de la API, más una bitácora de auditoría de solo lectura. |
+| **Roles y auditoría** | Seis roles (docente, jefatura de carrera, revisor/a, Área Curricular, UTA, administración) y un flujo de aprobación pensado para ser configurable por la institución con una matriz de permisos aplicada en cada ruta de la API, más una bitácora de auditoría de solo lectura. |
 
 **No incluye**, por ser un demo: inicio de sesión institucional real (SSO/OIDC), integración con un SGA o Aula Virtual reales, un proveedor de IA real ni un motor PDF institucional.
 
@@ -75,9 +79,9 @@ La misma capa de datos (`packages/core`) se usa de dos formas:
 Abra **https://manecist.github.io/banco-evaluaciones-demo/** y elija una persona ficticia. Un recorrido sugerido:
 
 1. **Paula Soto (docente):** busque «presion» en el banco. Luego «+ Nueva pregunta» → «Cargar un ejemplo», pida la segunda opinión de IA, guarde y envíe a revisión.
-2. **Camila Ruiz (revisora):** abra esa pregunta, tómela para revisión, use la «Ayuda para revisar» y vísela, o devuélvala con un comentario.
+2. **Camila Ruiz (revisora):** abra esa pregunta, tómela para revisión y use la «Ayuda para revisar». Pruebe «Consultar a un experto»: **Luis Pérez (jefatura)** la asigna a **Rosa Tapia**, que responde; luego Camila la visa.
 3. **Paula Soto:** en *Instrumentos*, arme una prueba nueva y revise el semáforo de cobertura. Después vea las formas A y B y la pauta, imprímala y expórtela a Moodle.
-4. Abra *Análisis de ítems* de la «Prueba 1» (tiene respuestas simuladas) y el *Asistente IA*.
+4. En la «Prueba 1», use *Corregir hojas de respuesta* → «Cargar 40 hojas escaneadas de ejemplo» → «Guardar notas». Luego abra su *Análisis de ítems*. En el banco, pruebe también *Importar prueba antigua*.
 5. **Luis Pérez (jefatura):** vea el *Panel de carrera*. **Marcela Díaz (UTA)** y **Administración:** vea la *Configuración* de cada uno.
 6. **Andrea Muñoz (Área Curricular):** revise la *Auditoría*, donde aparece todo lo anterior.
 
@@ -111,7 +115,7 @@ npm test                  # Vitest: núcleo y API
 npm run build:demo        # genera el demo estático en docs/
 ```
 
-Las 30 pruebas automatizadas corren sobre PostgreSQL real (PGlite). Cubren, entre otras cosas: búsqueda sin tildes y con errores de tipeo, inmutabilidad de versiones a nivel de base de datos, reglas del flujo de visación, visibilidad por rol, pruebas armadas solo con ítems visados, conversión a nota, barajado reproducible, análisis de ítems, eliminación de datos personales, exportación a Moodle, segunda opinión de IA (sin cambiar la clave), configuración por rol, panel de jefatura y permisos verificados en la API. Además, la integración continua (GitHub Actions) ejecuta la revisión de tipos, las pruebas, el build del demo y el build de la imagen Docker en cada cambio.
+Las 36 pruebas automatizadas corren sobre PostgreSQL real (PGlite). Cubren, entre otras cosas: búsqueda sin tildes y con errores de tipeo, inmutabilidad de versiones a nivel de base de datos, reglas del flujo de visación, visibilidad por rol, pruebas armadas solo con ítems visados, conversión a nota, barajado reproducible, análisis de ítems, eliminación de datos personales, exportación a Moodle, segunda opinión de IA (sin cambiar la clave), configuración por rol, panel de jefatura, consulta a par experto, importación de pruebas antiguas, corrección de hojas de respuesta y permisos verificados en la API. Además, la integración continua (GitHub Actions) ejecuta la revisión de tipos, las pruebas, el build del demo y el build de la imagen Docker en cada cambio.
 
 ## Capturas
 
@@ -121,6 +125,10 @@ Las 30 pruebas automatizadas corren sobre PostgreSQL real (PGlite). Cubren, entr
 | Inicio: cada rol explica qué hace | Banco de ítems con guía y búsqueda de «presion» |
 | ![Editor con asesor](docs/capturas/03-editor-asesor.png) | ![Ayuda para la revisora](docs/capturas/04a-ayuda-revisora.png) |
 | Nueva pregunta en 5 pasos, asesor, segunda opinión de IA y torpedo | Ayuda para revisar: pauta, asesor y segunda opinión |
+| ![Asesor con soluciones](docs/capturas/03b-asesor-soluciones.png) | ![Consulta a experto](docs/capturas/04c-experta-responde.png) |
+| Asesor con soluciones de un clic | Consulta a par experto: la experta responde |
+| ![Importar prueba antigua](docs/capturas/18-importar-prueba.png) | ![Corregir hojas](docs/capturas/19-corregir-hojas.png) |
+| Importar una prueba antigua escaneada | Corrección de 40 hojas de respuesta |
 | ![Nueva prueba](docs/capturas/06-nueva-prueba.png) | ![Forma A](docs/capturas/07-forma-a.png) |
 | Tabla de especificaciones con semáforo | Forma A imprimible con conversión a nota |
 | ![Análisis](docs/capturas/10-analisis.png) | ![Panel de jefatura](docs/capturas/15-panel-jefatura.png) |

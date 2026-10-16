@@ -99,6 +99,16 @@ export function createApp({ db, jwtSecret, allowDemoLogin, staticDir }: AppOptio
     res.status(204).end();
   }));
 
+  app.post("/api/import/legacy", h(async (req) => core.importLegacyItems(db, me(req), req.body)));
+  app.post("/api/instruments/:id/sheets", h(async (req) => {
+    const b = z.object({ csv: z.string().max(2_000_000) }).parse(req.body);
+    return core.saveSheetResults(db, me(req), Number(req.params.id), b.csv);
+  }));
+  app.get("/api/consultations", h(async (req) => core.listConsultations(db, me(req))));
+  app.post("/api/items/:id/consultation", h(async (req) => core.requestConsultation(db, me(req), Number(req.params.id), req.body)));
+  app.post("/api/consultations/:id/assign", h(async (req) => core.assignConsultation(db, me(req), Number(req.params.id), req.body)));
+  app.post("/api/consultations/:id/resolve", h(async (req) => core.resolveConsultation(db, me(req), Number(req.params.id), req.body)));
+
   app.get("/api/instruments", h(async (req) => core.listInstruments(db, me(req))));
   app.post("/api/instruments", h(async (req, res) => {
     res.status(201);

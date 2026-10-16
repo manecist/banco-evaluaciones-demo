@@ -61,7 +61,8 @@ export async function seed(db: Db): Promise<void> {
       ('Andrea Muñoz (Área Curricular)', 'area_curricular', NULL),
       ('Luis Pérez (jefatura Enfermería)', 'jefatura', 1),
       ('Marcela Díaz (UTA)', 'uta', NULL),
-      ('Administración del sistema', 'admin', NULL);
+      ('Administración del sistema', 'admin', NULL),
+      ('Rosa Tapia (docente Enfermería)', 'docente', 1);
 
     INSERT INTO setting (key, value) VALUES
       ('min_responses', '30'),

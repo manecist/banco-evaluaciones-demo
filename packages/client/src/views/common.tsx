@@ -1,5 +1,6 @@
 import type { ItemVersion } from "@banco/core";
 import { BLOOM_LABEL, ITEM_TYPE_LABEL, LETTERS } from "@banco/core";
+import type { AiReviewResult } from "../api";
 import { STATUS_LABEL, useApp } from "../ctx";
 
 export function StatusBadge({ s }: { s: string }) {
@@ -63,6 +64,42 @@ export function ItemPreview({ v, showKey = true, order }: { v: ItemVersion; show
         </div>
       )}
       {p.type === "desarrollo" && showKey && <p className="keytxt">Pauta: {p.rubric}</p>}
+    </div>
+  );
+}
+
+const KEY_LABEL: Record<AiReviewResult["keyAssessment"], string> = {
+  coherente: "Sin observaciones",
+  dudosa: "Conviene revisar",
+  sin_clave: "Falta marcar la respuesta correcta",
+};
+
+/** Resultado de la segunda opinión de IA (lo ven docente y revisora). */
+export function AiReviewOut({ review, onUseStem }: { review: AiReviewResult; onUseStem?: (s: string) => void }) {
+  const a = review.aiAnswer;
+  return (
+    <div className="review-out">
+      <p><span className={`badge rv-${review.keyAssessment}`}>{KEY_LABEL[review.keyAssessment]}</span></p>
+      {a && (
+        <div className={`ai-answer ${a.agreesWithKey === false ? "disagree" : a.agreesWithKey ? "agree" : ""}`}>
+          <p>
+            <b>{a.letter ? `La IA cree que la correcta es la ${a.letter}` : "La IA no propone una alternativa"}</b>
+            {a.agreesWithKey === true && " · coincide con la marcada ✓"}
+            {a.agreesWithKey === false && a.letter && " · NO coincide con la marcada"}
+          </p>
+          <p className="small">{a.justification}</p>
+        </div>
+      )}
+      {review.observations.length > 0 && <ul>{review.observations.map((o, i) => <li key={i}>{o}</li>)}</ul>}
+      {review.observations.length === 0 && <p className="small">{review.comment}</p>}
+      {review.suggestedStem && onUseStem && (
+        <div className="suggest">
+          <p className="small"><b>Redacción sugerida:</b> {review.suggestedStem}</p>
+          <button className="small" onClick={() => onUseStem(review.suggestedStem!)}>Usar esta redacción</button>
+        </div>
+      )}
+      {review.piiRemoved > 0 && <p className="small muted">Se quitaron {review.piiRemoved} dato(s) personal(es) antes de enviar el texto.</p>}
+      {review.simulated && <p className="small muted">Demo: IA simulada con una base de conocimiento de ejemplo (temas del demo). En producción, un modelo de lenguaje opina sobre cualquier tema. La decisión siempre es de una persona.</p>}
     </div>
   );
 }

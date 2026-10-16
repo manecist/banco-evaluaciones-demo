@@ -42,6 +42,12 @@ export const openApiDocument = {
       put: { summary: "Cambiar ajustes (pedagógicos: UTA; técnicos: Administración)", responses: { "200": { description: "Ajustes actualizados" }, "403": { description: "Sin permiso para ese ajuste" }, "422": { description: "Valor fuera de rango" } } },
     },
     "/api/career-summary": { get: { summary: "Panel de la carrera para la jefatura", responses: { "200": { description: "Resumen" } } } },
+    "/api/consultations": { get: { summary: "Consultas a par experto (jefatura: su carrera; experto: las asignadas)", responses: { "200": { description: "Lista" } } } },
+    "/api/items/{id}/consultation": { post: { summary: "Revisor/a pide la opinión de un par experto", responses: { "200": { description: "Ítem" }, "409": { description: "No está en revisión o ya hay una consulta abierta" } } } },
+    "/api/consultations/{id}/assign": { post: { summary: "Jefatura asigna la consulta a un experto de la carrera", responses: { "200": { description: "Consulta" } } } },
+    "/api/consultations/{id}/resolve": { post: { summary: "Jefatura o experto asignado responde", responses: { "200": { description: "Consulta resuelta" } } } },
+    "/api/import/legacy": { post: { summary: "Importar preguntas de una prueba antigua como borradores", responses: { "200": { description: "Ítems creados" } } } },
+    "/api/instruments/{id}/sheets": { post: { summary: "Corregir y guardar hojas de respuesta (archivo del lector óptico)", responses: { "200": { description: "Notas y resumen" } } } },
     "/api/audit": { get: { summary: "Bitácora de auditoría", responses: { "200": { description: "Registros" } } } },
   },
 } as const;

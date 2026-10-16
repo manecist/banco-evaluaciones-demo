@@ -12,6 +12,8 @@ export type Action =
   | "item:review"
   | "item:approve"
   | "item:archive"
+  | "consult:request"
+  | "consult:assign"
   | "instrument:create"
   | "export:moodle"
   | "analysis:read"
@@ -24,9 +26,9 @@ export type Action =
 
 const MATRIX: Record<Role, readonly Action[]> = {
   docente: ["item:read", "item:create", "item:edit_own", "item:submit", "instrument:create", "export:moodle", "analysis:read", "ai:use"],
-  jefatura: ["item:read", "analysis:read", "audit:read", "export:moodle", "career:dashboard"],
-  revisor: ["item:read", "item:review", "item:approve", "analysis:read", "audit:read"],
-  area_curricular: ["item:read", "item:create", "item:edit_own", "item:submit", "item:review", "item:approve", "item:archive", "instrument:create", "export:moodle", "analysis:read", "audit:read", "ai:use"],
+  jefatura: ["item:read", "analysis:read", "audit:read", "export:moodle", "career:dashboard", "consult:assign"],
+  revisor: ["item:read", "item:review", "item:approve", "analysis:read", "audit:read", "consult:request"],
+  area_curricular: ["item:read", "item:create", "item:edit_own", "item:submit", "item:review", "item:approve", "item:archive", "instrument:create", "export:moodle", "analysis:read", "audit:read", "ai:use", "consult:request"],
   uta: ["item:read", "export:moodle", "analysis:read", "audit:read", "settings:pedagogic"],
   admin: ["item:read", "audit:read", "settings:technical", "users:read"],
 };

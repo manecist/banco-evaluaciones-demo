@@ -2,6 +2,7 @@ import { z } from "zod";
 import { generateItems, reviewItem, simulatedProvider, simulatedReviewer, type AiRequest, type AiReviewRequest } from "./ai";
 import { analyzeItems, type AnswerRow } from "./analysis";
 import { LETTERS } from "./grading";
+import { buildForms, gradeSheets, originalChoice, parseSheetsCsv, type FormName } from "./sheets";
 import { toMoodleXml } from "./moodle";
 import {
   assertCan,
@@ -14,12 +15,16 @@ import {
   ValidationError,
 } from "./permissions";
 import {
+  consultationAssignSchema,
+  consultationRequestSchema,
+  consultationResolveSchema,
   instrumentInputSchema,
   itemInputSchema,
   itemSearchSchema,
   transitionSchema,
   type AuditEntry,
   type Catalog,
+  type Consultation,
   type InstrumentDetail,
   type InstrumentSummary,
   type ItemDetail,
@@ -185,7 +190,13 @@ export async function careerSummary(db: Db, user: User) {
       alerts: a.stats.filter((s) => s.alerts.length > 0).length,
     });
   }
+  const pend = await db.query<Row>(
+    `SELECT count(*)::int AS n FROM consultation c JOIN item i ON i.id = c.item_id JOIN item_version v ON v.id = i.current_version
+       JOIN module m ON m.id = v.module_id WHERE m.career_id = $1 AND c.status = 'pendiente'`,
+    [user.careerId],
+  );
   return {
+    pendingConsultations: pend.rows[0]!.n as number,
     careerId: user.careerId,
     byStatus: Object.fromEntries(byStatus.rows.map((r) => [r.status, r.n])) as Record<string, number>,
     modules: byModule.rows.map((r) => ({ id: r.id, code: r.code, name: r.name, visados: r.visados, enRevision: r.en_revision, enRedaccion: r.en_redaccion })),
@@ -258,8 +269,11 @@ export async function getItem(db: Db, user: User, id: number): Promise<ItemDetai
   assertCan(user, "item:read");
   const item = await loadItem(db, id);
   if (user.role === "docente" && item.author_id !== user.id && item.status !== "visado") {
-    throw new ForbiddenError("No tiene acceso a este ítem");
+    // Un docente puede ver un ítem ajeno en revisión solo si se le asignó como par experto.
+    const asg = await db.query<Row>(`SELECT 1 FROM consultation WHERE item_id = $1 AND assigned_to = $2`, [id, user.id]);
+    if (!asg.rows[0]) throw new ForbiddenError("No tiene acceso a este ítem");
   }
+  const consultation = (await queryConsultations(db, `c.item_id = $1`, [id]))[0] ?? null;
   const [versions, obs, aud, author] = await Promise.all([
     db.query<Row>(`SELECT ${VERSION_COLS} FROM item_version v JOIN app_user ua ON ua.id = v.author_id WHERE v.item_id = $1 ORDER BY v.version_no DESC`, [id]),
     db.query<Row>(`SELECT o.id, u.name, o.text, o.created_at FROM observation o JOIN app_user u ON u.id = o.author_id WHERE o.item_id = $1 ORDER BY o.id DESC`, [id]),
@@ -276,6 +290,7 @@ export async function getItem(db: Db, user: User, id: number): Promise<ItemDetai
     authorName: author.rows[0]?.name ?? "",
     publishedVersionId: item.published_version,
     current,
+    consultation,
     versions: vs,
     observations: obs.rows.map((o) => ({ id: o.id, authorName: o.name, text: o.text, createdAt: new Date(o.created_at).toISOString() })),
     audit: aud.rows.map(toAudit),
@@ -394,6 +409,10 @@ export async function transitionItem(db: Db, user: User, id: number, raw: unknow
       if (!String(row.stem).trim()) missing.push("enunciado");
       if (missing.length) throw new ValidationError("Faltan campos obligatorios", missing);
     }
+    if (to === "visado" || to === "devuelto") {
+      const open = await tx.query<Row>(`SELECT 1 FROM consultation WHERE item_id = $1 AND status <> 'resuelta'`, [id]);
+      if (open.rows[0]) throw new ConflictError("Hay una consulta a experto pendiente: espere su opinión antes de decidir");
+    }
     if (to === "visado") {
       await tx.query(`UPDATE item SET status = 'visado', published_version = current_version WHERE id = $1`, [id]);
     } else {
@@ -405,6 +424,105 @@ export async function transitionItem(db: Db, user: User, id: number, raw: unknow
     await audit(tx, user.id, `estado:${to}`, "item", id, { desde: item.status, comentario: comment ?? null });
   });
   return getItem(db, user, id);
+}
+
+/* ===================== Consulta a par experto ===================== */
+
+async function queryConsultations(db: Db, where: string, params: unknown[]): Promise<Consultation[]> {
+  const r = await db.query<Row>(
+    `SELECT c.*, v.stem, m.career_id, rq.name AS requested_name, asg.name AS assigned_name, rs.name AS resolved_name
+       FROM consultation c
+       JOIN item i ON i.id = c.item_id
+       JOIN item_version v ON v.id = i.current_version
+       JOIN module m ON m.id = v.module_id
+       JOIN app_user rq ON rq.id = c.requested_by
+       LEFT JOIN app_user asg ON asg.id = c.assigned_to
+       LEFT JOIN app_user rs ON rs.id = c.resolved_by
+      WHERE ${where}
+      ORDER BY (c.status = 'resuelta'), c.id DESC`,
+    params,
+  );
+  return r.rows.map((x) => ({
+    id: x.id,
+    itemId: x.item_id,
+    stem: x.stem,
+    careerId: x.career_id,
+    status: x.status,
+    reason: x.reason,
+    requestedBy: x.requested_name,
+    assignedToId: x.assigned_to,
+    assignedTo: x.assigned_name ?? null,
+    verdict: x.verdict ?? null,
+    opinion: x.opinion ?? null,
+    resolvedBy: x.resolved_name ?? null,
+    createdAt: new Date(x.created_at).toISOString(),
+  }));
+}
+
+async function itemCareer(db: Db, itemId: number): Promise<number> {
+  const r = await db.query<Row>(
+    `SELECT m.career_id FROM item i JOIN item_version v ON v.id = i.current_version JOIN module m ON m.id = v.module_id WHERE i.id = $1`,
+    [itemId],
+  );
+  if (!r.rows[0]) throw new NotFoundError(`Ítem ${itemId} no encontrado`);
+  return r.rows[0].career_id;
+}
+
+/** La revisora (o Área Curricular) pide la opinión de un experto cuando duda del contenido. */
+export async function requestConsultation(db: Db, user: User, itemId: number, raw: unknown): Promise<ItemDetail> {
+  assertCan(user, "consult:request");
+  const { reason } = parseOrThrow(consultationRequestSchema, raw);
+  const item = await loadItem(db, itemId);
+  if (item.status !== "en_revision") throw new ConflictError("Solo se puede consultar a un experto mientras el ítem está en revisión");
+  const open = await db.query<Row>(`SELECT 1 FROM consultation WHERE item_id = $1 AND status <> 'resuelta'`, [itemId]);
+  if (open.rows[0]) throw new ConflictError("Este ítem ya tiene una consulta abierta");
+  await db.tx(async (tx) => {
+    const c = await tx.query<Row>(`INSERT INTO consultation (item_id, requested_by, reason) VALUES ($1,$2,$3) RETURNING id`, [itemId, user.id, reason]);
+    await audit(tx, user.id, "consulta:solicitada", "item", itemId, { consulta: c.rows[0]!.id, motivo: reason });
+  });
+  return getItem(db, user, itemId);
+}
+
+/** La jefatura de la carrera asigna la consulta a un par experto (o la responde ella misma). */
+export async function assignConsultation(db: Db, user: User, id: number, raw: unknown): Promise<Consultation> {
+  assertCan(user, "consult:assign");
+  const { assigneeId } = parseOrThrow(consultationAssignSchema, raw);
+  const c = (await queryConsultations(db, `c.id = $1`, [id]))[0];
+  if (!c) throw new NotFoundError("Consulta no encontrada");
+  if (c.careerId !== user.careerId) throw new ForbiddenError("La consulta es de otra carrera");
+  if (c.status === "resuelta") throw new ConflictError("La consulta ya fue resuelta");
+  const assignee = await getUser(db, assigneeId);
+  const item = await loadItem(db, c.itemId);
+  if (assignee.careerId !== c.careerId) throw new ValidationError("El experto debe pertenecer a la misma carrera");
+  if (assignee.id === item.author_id) throw new ValidationError("El experto no puede ser el autor del ítem");
+  await db.tx(async (tx) => {
+    await tx.query(`UPDATE consultation SET status = 'asignada', assigned_to = $2 WHERE id = $1`, [id, assignee.id]);
+    await audit(tx, user.id, "consulta:asignada", "item", c.itemId, { consulta: id, experto: assignee.name });
+  });
+  return (await queryConsultations(db, `c.id = $1`, [id]))[0]!;
+}
+
+/** Responde la jefatura de la carrera o el experto asignado; su opinión queda como observación. */
+export async function resolveConsultation(db: Db, user: User, id: number, raw: unknown): Promise<Consultation> {
+  const { verdict, opinion } = parseOrThrow(consultationResolveSchema, raw);
+  const c = (await queryConsultations(db, `c.id = $1`, [id]))[0];
+  if (!c) throw new NotFoundError("Consulta no encontrada");
+  const isJefatura = can(user, "consult:assign") && user.careerId === c.careerId;
+  if (!isJefatura && c.assignedToId !== user.id) throw new ForbiddenError("Solo la jefatura de la carrera o el experto asignado pueden responder");
+  if (c.status === "resuelta") throw new ConflictError("La consulta ya fue resuelta");
+  const label = { clave_correcta: "La respuesta marcada es correcta", clave_incorrecta: "La respuesta marcada NO es correcta", pregunta_ambigua: "La pregunta es ambigua" }[verdict];
+  await db.tx(async (tx) => {
+    await tx.query(`UPDATE consultation SET status = 'resuelta', verdict = $2, opinion = $3, resolved_by = $4, resolved_at = now() WHERE id = $1`, [id, verdict, opinion, user.id]);
+    await tx.query(`INSERT INTO observation (item_id, author_id, text) VALUES ($1,$2,$3)`, [c.itemId, user.id, `Opinión de experto: ${label}. ${opinion}`]);
+    await audit(tx, user.id, "consulta:resuelta", "item", c.itemId, { consulta: id, dictamen: label });
+  });
+  return (await queryConsultations(db, `c.id = $1`, [id]))[0]!;
+}
+
+/** Jefatura: las consultas de su carrera. Resto: las que tiene asignadas como experto. */
+export async function listConsultations(db: Db, user: User): Promise<Consultation[]> {
+  if (can(user, "consult:assign")) return queryConsultations(db, `m.career_id = $1`, [user.careerId]);
+  return queryConsultations(db, `c.assigned_to = $1`, [user.id]);
 }
 
 export async function archiveItem(db: Db, user: User, id: number): Promise<ItemDetail> {
@@ -566,6 +684,65 @@ export async function analyzeInstrument(db: Db, user: User, instrumentId: number
   const stats = analyzeItems(rows, { minResponses: Number(settings.min_responses ?? 30), correctChoice });
   const students = new Set(rows.map((x) => x.student)).size;
   return { instrument: ins, students, stats, correctChoice };
+}
+
+/** Importa preguntas de una prueba antigua como BORRADORES del docente (luego siguen la visación normal). */
+export async function importLegacyItems(db: Db, user: User, raw: unknown) {
+  assertCan(user, "item:create");
+  const input = parseOrThrow(
+    z.object({
+      moduleId: z.number().int(),
+      outcomeId: z.number().int(),
+      source: z.string().trim().min(1).max(200),
+      questions: z.array(z.object({ stem: z.string(), bloomLevel: z.number().int().min(1).max(6), payload: z.unknown() })).min(1).max(100),
+    }),
+    raw,
+  );
+  const created: ItemDetail[] = [];
+  for (const q of input.questions) {
+    created.push(await createItem(db, user, {
+      stem: q.stem, payload: q.payload, points: 1, moduleId: input.moduleId, outcomeId: input.outcomeId,
+      bloomLevel: q.bloomLevel, difficulty: 3, reason: `Importada desde prueba anterior (${input.source})`,
+    }));
+  }
+  return created;
+}
+
+/**
+ * Guarda las hojas corregidas como intentos del instrumento: así la nota queda
+ * registrada y el análisis de ítems se actualiza con los resultados reales.
+ */
+export async function saveSheetResults(db: Db, user: User, instrumentId: number, csv: string) {
+  assertCan(user, "instrument:create");
+  const ins = await getInstrument(db, user, instrumentId);
+  const forms = buildForms(ins.items, ins.seed);
+  const { rows, invalid } = parseSheetsCsv(csv);
+  const summary = gradeSheets(forms, rows, { exigency: ins.exigency, invalid });
+  let saved = 0;
+  let skipped = 0;
+  await db.tx(async (tx) => {
+    for (const r of rows) {
+      const a = await tx.query<Row>(
+        `INSERT INTO attempt (instrument_id, student_code) VALUES ($1, $2) ON CONFLICT (instrument_id, student_code) DO NOTHING RETURNING id`,
+        [instrumentId, r.code],
+      );
+      if (!a.rows[0]) {
+        skipped++;
+        continue;
+      }
+      saved++;
+      const form = forms[r.form as FormName];
+      for (const [i, fi] of form.entries()) {
+        const res = summary.results.find((x) => x.code === r.code)!.marks[i]!;
+        if (res.ok === null) continue; // corrección manual: queda fuera del cálculo automático
+        await tx.query(`INSERT INTO answer (attempt_id, item_version_id, choice, score) VALUES ($1,$2,$3,$4)`, [
+          a.rows[0].id, fi.v.id, originalChoice(fi, res.mark), res.ok ? fi.v.points : 0,
+        ]);
+      }
+    }
+    await audit(tx, user.id, "corregir_hojas", "instrument", instrumentId, { hojas: rows.length, guardadas: saved, repetidas: skipped });
+  });
+  return { saved, skipped, summary };
 }
 
 export async function listAudit(db: Db, user: User, limit = 100): Promise<AuditEntry[]> {

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   adviseItem,
   BLOOM_LABEL,
-  detectBloomLevel,
   ITEM_TYPE_LABEL,
   ITEM_TYPES,
   itemInputSchema,
@@ -13,7 +12,7 @@ import {
 } from "@banco/core";
 import type { AiReviewResult } from "../api";
 import { useApp, useLoad } from "../ctx";
-import { ErrorBox, ItemPreview, Loading } from "./common";
+import { AiReviewOut, ErrorBox, ItemPreview, Loading } from "./common";
 
 const EMPTY: Record<ItemType, ItemPayload> = {
   seleccion_multiple: {
@@ -56,11 +55,6 @@ const TYPE_HELP: Record<ItemType, string> = {
   desarrollo: "Respuesta escrita larga, que se corrige con una pauta.",
 };
 
-const KEY_LABEL: Record<AiReviewResult["keyAssessment"], string> = {
-  coherente: "Sin observaciones",
-  dudosa: "Revise antes de enviar",
-  sin_clave: "Falta marcar la correcta",
-};
 
 export function EditorView({ id }: { id?: number }) {
   const { api, catalog, can, go, toast } = useApp();
@@ -74,6 +68,7 @@ export function EditorView({ id }: { id?: number }) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [saving, setSaving] = useState(false);
   const [review, setReview] = useState<AiReviewResult | null>(null);
+  const [applied, setApplied] = useState<{ rule: string; message: string }[]>([]);
   const [reviewing, setReviewing] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
 
@@ -106,12 +101,14 @@ export function EditorView({ id }: { id?: number }) {
   const updP = (p: ItemPayload) => setForm({ ...form, payload: p });
   const module = catalog.modules.find((m) => m.id === form.moduleId)!;
 
-  const decide = (s: Suggestion, d: "aceptada" | "descartada") => {
-    setDecisions((x) => ({ ...x, [s.rule]: d }));
-    if (d === "aceptada" && s.rule === "nivel_por_verbo") {
-      const b = detectBloomLevel(form.stem);
-      if (b) upd({ bloomLevel: b.level });
-    }
+  const decide = (s: Suggestion, d: "aceptada" | "descartada") => setDecisions((x) => ({ ...x, [s.rule]: d }));
+
+  /** Aplica la solución propuesta por el asesor; queda registrada como sugerencia aceptada. */
+  const applyFix = (s: Suggestion) => {
+    if (!s.fix) return;
+    setApplied((a) => [...a.filter((x) => x.rule !== s.rule), { rule: s.rule, message: s.message }]);
+    upd({ ...(s.fix.stem ? { stem: s.fix.stem } : {}), ...(s.fix.bloomLevel ? { bloomLevel: s.fix.bloomLevel } : {}) });
+    toast("Solución aplicada: puede seguir editando el texto");
   };
 
   const save = async () => {
@@ -127,8 +124,9 @@ export function EditorView({ id }: { id?: number }) {
       // Las decisiones sobre las sugerencias quedan registradas para el revisor.
       for (const s of suggestions) {
         const d = decisions[s.rule];
-        if (d) await api.advisorDecision(saved.current.id, { rule: s.rule, message: s.message, decision: d });
+        if (d && !applied.some((a) => a.rule === s.rule)) await api.advisorDecision(saved.current.id, { rule: s.rule, message: s.message, decision: d });
       }
+      for (const a of applied) await api.advisorDecision(saved.current.id, { ...a, decision: "aceptada" });
       toast(id ? `Guardado como versión ${saved.current.versionNo}` : "Ítem creado en borrador");
       go({ name: "item", id: saved.id });
     } catch (e: any) {
@@ -336,15 +334,18 @@ export function EditorView({ id }: { id?: number }) {
 
           <div className="card advisor">
             <h2>Asesor automático</h2>
-            <p className="hint">Revisa la pregunta mientras escribe, con reglas fijas (no es IA). Puede marcar cada consejo como aceptado o descartado; el revisor verá su decisión.</p>
+            <p className="hint">Revisa la pregunta mientras escribe, con reglas fijas (no es IA). Cada consejo explica cómo corregirlo y, cuando se puede, ofrece la solución con un clic. El revisor verá qué decidió.</p>
             {suggestions.length === 0 ? <p className="ok">Sin observaciones por ahora.</p> : (
               <ul>
                 {suggestions.map((s) => (
                   <li key={s.rule} className={`sev-${s.severity} ${decisions[s.rule] ?? ""}`}>
-                    <p>{s.message}</p>
-                    <div className="actions">
-                      <button className="small" onClick={() => decide(s, "aceptada")} aria-pressed={decisions[s.rule] === "aceptada"}>Aceptar</button>
-                      <button className="small ghost" onClick={() => decide(s, "descartada")} aria-pressed={decisions[s.rule] === "descartada"}>Descartar</button>
+                    <p><b>{s.message}</b></p>
+                    {s.howTo && <p className="howto"><span>Cómo corregirlo:</span> {s.howTo}</p>}
+                    {s.fix?.stem && <p className="fix-preview">«{s.fix.stem}»</p>}
+                    <div className="actions wrap">
+                      {s.fix && <button className="small primary" onClick={() => applyFix(s)}>{s.fix.label}</button>}
+                      <button className="small" onClick={() => decide(s, "aceptada")} aria-pressed={decisions[s.rule] === "aceptada"}>Lo corrijo yo</button>
+                      <button className="small ghost" onClick={() => decide(s, "descartada")} aria-pressed={decisions[s.rule] === "descartada"}>Lo dejo así</button>
                     </div>
                   </li>
                 ))}
@@ -357,21 +358,7 @@ export function EditorView({ id }: { id?: number }) {
               <h2>Segunda opinión de IA</h2>
               <p className="hint"><b>La respuesta correcta la decide usted.</b> La IA solo revisa la pregunta y avisa si algo se ve dudoso; nunca cambia la respuesta marcada. Después, la revisora valida todo.</p>
               <button disabled={reviewing || !form.stem.trim()} onClick={askReview}>{reviewing ? "Revisando…" : "Pedir segunda opinión"}</button>
-              {review && (
-                <div className="review-out">
-                  <p><span className={`badge rv-${review.keyAssessment}`}>{KEY_LABEL[review.keyAssessment]}</span></p>
-                  <p>{review.comment}</p>
-                  {review.observations.length > 0 && <ul>{review.observations.map((o, i) => <li key={i}>{o}</li>)}</ul>}
-                  {review.suggestedStem && (
-                    <div className="suggest">
-                      <p className="small"><b>Redacción sugerida:</b> {review.suggestedStem}</p>
-                      <button className="small" onClick={() => upd({ stem: review.suggestedStem! })}>Usar esta redacción</button>
-                    </div>
-                  )}
-                  {review.piiRemoved > 0 && <p className="small muted">Se quitaron {review.piiRemoved} dato(s) personal(es) antes de enviar el texto.</p>}
-                  {review.simulated && <p className="small muted">Demo: proveedor de IA simulado, que revisa la forma de la pregunta. Con un proveedor real también comenta el contenido técnico.</p>}
-                </div>
-              )}
+              {review && <AiReviewOut review={review} onUseStem={(st) => upd({ stem: st })} />}
             </div>
           )}
 

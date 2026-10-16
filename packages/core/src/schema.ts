@@ -115,6 +115,23 @@ CREATE TABLE observation (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Consulta a un par experto cuando revisor/a y docente discrepan (la decide o asigna la jefatura).
+CREATE TABLE consultation (
+  id           serial PRIMARY KEY,
+  item_id      int NOT NULL REFERENCES item(id),
+  requested_by int NOT NULL REFERENCES app_user(id),
+  reason       text NOT NULL CHECK (length(trim(reason)) > 0),
+  status       text NOT NULL DEFAULT 'pendiente' CHECK (status IN ('pendiente','asignada','resuelta')),
+  assigned_to  int REFERENCES app_user(id),
+  verdict      text CHECK (verdict IN ('clave_correcta','clave_incorrecta','pregunta_ambigua')),
+  opinion      text,
+  resolved_by  int REFERENCES app_user(id),
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  resolved_at  timestamptz
+);
+-- Una sola consulta abierta por ítem.
+CREATE UNIQUE INDEX consultation_open ON consultation (item_id) WHERE status <> 'resuelta';
+
 -- Sugerencias del asesor: quedan visibles para el revisor (RF-04).
 CREATE TABLE advisor_decision (
   id          serial PRIMARY KEY,

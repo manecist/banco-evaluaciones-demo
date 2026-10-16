@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  aiDraftItems, analyzeInstrument, archiveItem, createInstrument, createItem, exportMoodle, getItem, getUser, listAudit,
+  aiDraftItems, analyzeInstrument, assignConsultation, listConsultations, requestConsultation, resolveConsultation, archiveItem, createInstrument, createItem, exportMoodle, getItem, getUser, listAudit,
   migrate, restoreVersion, searchItems, seed, transitionItem, updateItem, type User,
 } from "../src";
 import { createPgliteDb } from "../src/adapters/pglite";
@@ -117,4 +117,24 @@ describe("banco de ítems sobre PostgreSQL (PGlite)", () => {
     expect(log.some((a) => a.action === "archivar")).toBe(true);
     await expect(listAudit(db, paula)).rejects.toThrow(/permiso/);
   });
+  it("consulta a par experto: bloquea la decisión hasta que el experto opina", async () => {
+    const it0 = await createItem(db, paula, { ...base, stem: "Identifique la frecuencia respiratoria normal de un adulto en reposo" });
+    await transitionItem(db, paula, it0.id, { to: "recepcionado" });
+    await transitionItem(db, camila, it0.id, { to: "en_revision" });
+    await expect(requestConsultation(db, jorge, it0.id, { reason: "duda" })).rejects.toThrow(/permiso/);
+    await requestConsultation(db, camila, it0.id, { reason: "No estoy segura de la clave" });
+    await expect(transitionItem(db, camila, it0.id, { to: "visado" })).rejects.toThrow(/consulta a experto pendiente/);
+    const [c] = (await listConsultations(db, jefe)).filter((x) => x.itemId === it0.id);
+    expect(c!.status).toBe("pendiente");
+    await expect(assignConsultation(db, jefe, c!.id, { assigneeId: paula.id })).rejects.toThrow(/autor/);
+    const rosa = await getUser(db, 8);
+    await assignConsultation(db, jefe, c!.id, { assigneeId: rosa.id });
+    expect((await getItem(db, rosa, it0.id)).consultation?.assignedTo).toMatch(/Rosa/);
+    await expect(resolveConsultation(db, camila, c!.id, { verdict: "clave_correcta", opinion: "Correcta según protocolo" })).rejects.toThrow(/jefatura|experto/);
+    await resolveConsultation(db, rosa, c!.id, { verdict: "clave_correcta", opinion: "Correcta según protocolo" });
+    const after = await transitionItem(db, camila, it0.id, { to: "visado" });
+    expect(after.status).toBe("visado");
+    expect(after.observations.some((o) => /Opinión de experto/.test(o.text))).toBe(true);
+  });
 });
+

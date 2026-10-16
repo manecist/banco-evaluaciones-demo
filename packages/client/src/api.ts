@@ -1,6 +1,7 @@
 import type {
   AuditEntry,
   Catalog,
+  Consultation,
   InstrumentDetail,
   InstrumentInput,
   InstrumentSummary,
@@ -28,12 +29,14 @@ export interface AiReviewResult {
   comment: string;
   observations: string[];
   suggestedStem?: string;
+  aiAnswer?: { letter: string | null; justification: string; agreesWithKey: boolean | null };
   piiRemoved: number;
   model: string;
   simulated: boolean;
 }
 
 export interface CareerSummary {
+  pendingConsultations: number;
   careerId: number;
   byStatus: Record<string, number>;
   modules: { id: number; code: string; name: string; visados: number; enRevision: number; enRedaccion: number }[];
@@ -56,6 +59,12 @@ export interface Api {
   settings(): Promise<Record<string, unknown>>;
   updateSettings(patch: Record<string, unknown>): Promise<Record<string, unknown>>;
   careerSummary(): Promise<CareerSummary>;
+  consultations(): Promise<Consultation[]>;
+  importLegacy(req: { moduleId: number; outcomeId: number; source: string; questions: { stem: string; bloomLevel: number; payload: unknown }[] }): Promise<ItemDetail[]>;
+  saveSheets(instrumentId: number, csv: string): Promise<{ saved: number; skipped: number }>;
+  requestConsultation(itemId: number, reason: string): Promise<ItemDetail>;
+  assignConsultation(id: number, assigneeId: number): Promise<Consultation>;
+  resolveConsultation(id: number, d: { verdict: string; opinion: string }): Promise<Consultation>;
   searchItems(f: ItemSearch): Promise<ItemSummary[]>;
   getItem(id: number): Promise<ItemDetail>;
   createItem(input: ItemInput): Promise<ItemDetail>;
@@ -110,6 +119,12 @@ export function createHttpApi(): Api {
     settings: () => call("GET", "/api/settings"),
     updateSettings: (p) => call("PUT", "/api/settings", p),
     careerSummary: () => call("GET", "/api/career-summary"),
+    consultations: () => call("GET", "/api/consultations"),
+    importLegacy: (r) => call("POST", "/api/import/legacy", r),
+    saveSheets: (id, csv) => call("POST", `/api/instruments/${id}/sheets`, { csv }),
+    requestConsultation: (id, reason) => call("POST", `/api/items/${id}/consultation`, { reason }),
+    assignConsultation: (id, assigneeId) => call("POST", `/api/consultations/${id}/assign`, { assigneeId }),
+    resolveConsultation: (id, d) => call("POST", `/api/consultations/${id}/resolve`, d),
     searchItems: (f) => call("GET", `/api/items?${qs(f)}`),
     getItem: (id) => call("GET", `/api/items/${id}`),
     createItem: (i) => call("POST", "/api/items", i),
@@ -164,6 +179,12 @@ export async function createLocalApi(onProgress?: (msg: string) => void): Promis
     settings: () => core.getSettings(db),
     updateSettings: (p) => wrap(() => core.updateSettings(db, u(), p)),
     careerSummary: () => wrap(() => core.careerSummary(db, u())),
+    consultations: () => wrap(() => core.listConsultations(db, u())),
+    importLegacy: (r) => wrap(() => core.importLegacyItems(db, u(), r)),
+    saveSheets: (id, csv) => wrap(() => core.saveSheetResults(db, u(), id, csv)),
+    requestConsultation: (id, reason) => wrap(() => core.requestConsultation(db, u(), id, { reason })),
+    assignConsultation: (id, assigneeId) => wrap(() => core.assignConsultation(db, u(), id, { assigneeId })),
+    resolveConsultation: (id, d) => wrap(() => core.resolveConsultation(db, u(), id, d)),
     searchItems: (f) => wrap(() => core.searchItems(db, u(), f)),
     getItem: (id) => wrap(() => core.getItem(db, u(), id)),
     createItem: (i) => wrap(() => core.createItem(db, u(), i)),

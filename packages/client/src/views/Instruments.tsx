@@ -6,10 +6,11 @@ import {
   gradeTable,
   ITEM_TYPE_LABEL,
   LETTERS,
-  seededShuffle,
+  buildForms,
+  keyText,
+  type FormItem,
   type InstrumentDetail,
   type ItemSummary,
-  type ItemVersion,
 } from "@banco/core";
 import { useApp, useLoad } from "../ctx";
 import { ErrorBox, ItemPreview, Loading } from "./common";
@@ -255,43 +256,7 @@ export function NewInstrumentView() {
 
 /* ============================ Detalle e impresión ============================ */
 
-interface FormItem {
-  v: ItemVersion;
-  /** Orden de las alternativas (índices del original); solo selección múltiple. */
-  order?: number[];
-}
-
-/**
- * Forma A usa la semilla del instrumento y la forma B la semilla + 1.
- * La misma semilla de la forma, combinada con el id de la versión, baraja
- * las alternativas de cada pregunta: el resultado es siempre reproducible.
- */
-function buildForm(items: ItemVersion[], formSeed: number): FormItem[] {
-  return seededShuffle(items, formSeed).map((v) => ({
-    v,
-    order: v.payload.type === "seleccion_multiple" ? seededShuffle(v.payload.alternatives.map((_, i) => i), formSeed * 31 + v.id) : undefined,
-  }));
-}
-
-function keyOf({ v, order }: FormItem): string {
-  const p = v.payload;
-  switch (p.type) {
-    case "seleccion_multiple": {
-      const k = (order ?? []).findIndex((i) => p.alternatives[i]?.correct);
-      return LETTERS[k] ?? "?";
-    }
-    case "verdadero_falso":
-      return (p.answer ? "Verdadero" : "Falso") + (p.requiresJustification ? " (con justificación)" : "");
-    case "respuesta_breve":
-      return p.accepted.join(" · ");
-    case "pareados":
-      return p.pairs.map((x) => `${x.left} → ${x.right}`).join("; ");
-    case "desarrollo":
-      return p.rubric;
-  }
-}
-
-type Doc = "A" | "B" | "pauta";
+type Doc = "A" | "B" | "pauta" | "hoja";
 
 export function InstrumentView({ id }: { id: number }) {
   const { api, can, go, toast } = useApp();
@@ -299,7 +264,7 @@ export function InstrumentView({ id }: { id: number }) {
   const [doc, setDoc] = useState<Doc>("A");
   const [exporting, setExporting] = useState(false);
 
-  const forms = useMemo(() => (data ? { A: buildForm(data.items, data.seed), B: buildForm(data.items, data.seed + 1) } : null), [data]);
+  const forms = useMemo(() => (data ? buildForms(data.items, data.seed) : null), [data]);
 
   if (error) return <ErrorBox error={error} />;
   if (!data || !forms) return <Loading />;
@@ -334,20 +299,21 @@ export function InstrumentView({ id }: { id: number }) {
           <div className="actions wrap">
             <button className="primary" onClick={() => window.print()}>Imprimir / guardar PDF</button>
             {can("export:moodle") && <button disabled={exporting} onClick={exportXml}>{exporting ? "Exportando…" : "Exportar a Moodle (XML)"}</button>}
+            {can("instrument:create") && <button onClick={() => go({ name: "sheets", id })}>Corregir hojas de respuesta</button>}
             {can("analysis:read") && <button className="ghost" onClick={() => go({ name: "analysis", id })}>Análisis de ítems</button>}
           </div>
         </div>
         <div className="tabs" role="tablist">
-          {(["A", "B", "pauta"] as Doc[]).map((d) => (
+          {(["A", "B", "pauta", "hoja"] as Doc[]).map((d) => (
             <button key={d} role="tab" aria-selected={doc === d} className={doc === d ? "active" : ""} onClick={() => setDoc(d)}>
-              {d === "pauta" ? "Pauta de corrección" : `Forma ${d}`}
+              {d === "pauta" ? "Pauta de corrección" : d === "hoja" ? "Hoja de respuestas" : `Forma ${d}`}
             </button>
           ))}
         </div>
         <p className="hint">Se imprime el documento seleccionado. La vista imprimible es una aproximación; en producción el PDF lo genera el motor de documentos de la institución.</p>
       </div>
 
-      {doc === "pauta" ? <AnswerKey data={data} forms={forms} /> : <Paper data={data} form={doc} items={forms[doc]} />}
+      {doc === "pauta" ? <AnswerKey data={data} forms={forms} /> : doc === "hoja" ? <AnswerSheet data={data} forms={forms} /> : <Paper data={data} form={doc} items={forms[doc]} />}
     </section>
   );
 }
@@ -438,7 +404,7 @@ function AnswerKey({ data, forms }: { data: InstrumentDetail; forms: Record<"A" 
                   {forms[f].map((fi, i) => (
                     <tr key={fi.v.id}>
                       <td>{i + 1}</td>
-                      <td className={fi.v.payload.type === "seleccion_multiple" ? "key-letter" : "small"}>{keyOf(fi)}</td>
+                      <td className={fi.v.payload.type === "seleccion_multiple" ? "key-letter" : "small"}>{keyText(fi)}</td>
                       <td className="num">{fmt(fi.v.points, fi.v.points % 1 ? 1 : 0)}</td>
                       <td className="small">#{fi.v.itemId} v{fi.v.versionNo}</td>
                     </tr>
@@ -452,3 +418,40 @@ function AnswerKey({ data, forms }: { data: InstrumentDetail; forms: Record<"A" 
     </article>
   );
 }
+
+/** Hoja de respuestas para marcar con lápiz y leer con lector óptico o escáner. */
+function AnswerSheet({ data, forms }: { data: InstrumentDetail; forms: Record<"A" | "B", FormItem[]> }) {
+  const n = forms.A.length;
+  const maxAlts = Math.max(2, ...forms.A.map((fi) => (fi.v.payload.type === "seleccion_multiple" ? fi.v.payload.alternatives.length : 2)));
+  return (
+    <article className="paper sheet">
+      <PaperHeader data={data} subtitle="Hoja de respuestas" />
+      <div className="sheet-top">
+        <div className="sheet-box">
+          <b>Forma</b>
+          <span className="bubbles">{["A", "B"].map((f) => <span key={f} className="bubble">{f}</span>)}</span>
+        </div>
+        <div className="sheet-box">
+          <b>Código de estudiante</b>
+          <span className="code-boxes">{[0, 1, 2, 3].map((i) => <span key={i} className="code-box" />)}</span>
+        </div>
+      </div>
+      <p className="paper-instr">Rellene completamente un círculo por pregunta con lápiz grafito. Para Verdadero o Falso use V o F. Las preguntas de desarrollo se responden en la prueba.</p>
+      <ol className="sheet-grid">
+        {Array.from({ length: n }, (_, i) => {
+          // La posición puede ser de distinto tipo en cada forma: se ofrecen las marcas de ambas.
+          const types = [forms.A[i]!.v.payload.type, forms.B[i]!.v.payload.type];
+          const opts = [...(types.includes("seleccion_multiple") ? LETTERS.slice(0, maxAlts) : []), ...(types.includes("verdadero_falso") ? ["V", "F"] : [])];
+          return (
+            <li key={i}>
+              <b>{i + 1}</b>
+              {opts.length ? <span className="bubbles">{opts.map((o) => <span key={o} className="bubble">{o}</span>)}</span> : <span className="small muted">desarrollo</span>}
+            </li>
+          );
+        })}
+      </ol>
+      <p className="small muted">El lector óptico o la app de escaneo registra las marcas; el sistema las corrige con la pauta de la forma indicada.</p>
+    </article>
+  );
+}
+

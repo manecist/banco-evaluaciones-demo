@@ -15,6 +15,8 @@ export function ItemsView() {
   }, [q]);
 
   const { data, error } = useLoad(() => api.searchItems({ ...f, q: debounced || undefined }), [debounced, JSON.stringify(f)]);
+  const consults = useLoad(() => (can("consult:assign") ? Promise.resolve([]) : api.consultations()), []);
+  const assigned = (consults.data ?? []).filter((c) => c.status === "asignada");
   const modules = catalog.modules.filter((m) => !f.careerId || m.careerId === f.careerId);
   const outcomes = catalog.outcomes.filter((o) => !f.moduleId || o.moduleId === f.moduleId);
   const set = (k: keyof ItemSearch, v: string) => setF((x) => ({ ...x, [k]: v === "" ? undefined : isNaN(Number(v)) ? v : Number(v) }));
@@ -29,14 +31,31 @@ export function ItemsView() {
             español: tolera tildes y errores de tipeo.
           </p>
         </div>
-        {can("item:create") && <button className="primary" onClick={() => go({ name: "edit" })}>+ Nueva pregunta</button>}
+        {can("item:create") && (
+          <div className="actions wrap">
+            <button onClick={() => go({ name: "import" })}>Importar prueba antigua</button>
+            <button className="primary" onClick={() => go({ name: "edit" })}>+ Nueva pregunta</button>
+          </div>
+        )}
       </div>
+
+      {assigned.length > 0 && (
+        <div className="card guide consult">
+          <h2>Consultas asignadas a usted</h2>
+          <p className="hint">La jefatura de carrera le pidió su opinión como experto/a sobre estas preguntas.</p>
+          <ul className="list compact">
+            {assigned.map((c) => (
+              <li key={c.id}><button className="row" onClick={() => go({ name: "item", id: c.itemId })}><p className="stem-line">#{c.itemId} · {c.stem}</p><p className="small muted">Duda: {c.reason}</p></button></li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {can("item:create") && (
         <div className="card guide">
           <h2>¿Primera vez? Así se usa</h2>
           <ol className="guide-steps">
-            <li>Presione <b>«+ Nueva pregunta»</b> y siga los 5 pasos. Puede cargar un ejemplo con un clic.</li>
+            <li>Presione <b>«+ Nueva pregunta»</b> y siga los 5 pasos (puede cargar un ejemplo), o <b>«Importar prueba antigua»</b> para traer pruebas que ya tiene en papel o Word.</li>
             <li>Abra la pregunta guardada y presione <b>«Enviar a revisión»</b>.</li>
             <li>Un revisor la aprueba (<b>visa</b>). En el demo: «Cambiar rol» → Camila Ruiz.</li>
             <li>Con preguntas visadas, arme una prueba en <b>«Instrumentos»</b>.</li>

@@ -8,6 +8,7 @@ import { ErrorBox, Loading } from "./common";
 export function CareerView() {
   const { api, catalog, user, go } = useApp();
   const { data, error } = useLoad(() => api.careerSummary(), []);
+  const consults = useLoad(() => api.consultations(), []);
   const career = catalog.careers.find((c) => c.id === user.careerId);
 
   if (error) return <ErrorBox error={error} />;
@@ -32,11 +33,32 @@ export function CareerView() {
       <div className="stats-row">
         <div className="stat"><b>{s.visado ?? 0}</b><span>preguntas aprobadas, listas para usar</span></div>
         <div className="stat"><b>{enRevision}</b><span>esperando revisión</span></div>
+        <div className={`stat ${data.pendingConsultations ? "stat-alert" : ""}`}><b>{data.pendingConsultations}</b><span>consultas a experto por atender</span></div>
         <div className="stat"><b>{enRedaccion}</b><span>en redacción o devueltas</span></div>
         <div className={`stat ${data.instruments.some((i) => i.priority) ? "stat-alert" : ""}`}>
           <b>{data.instruments.reduce((a, i) => a + i.priority, 0)}</b><span>preguntas con alerta prioritaria</span>
         </div>
       </div>
+
+      <h2>Consultas a expertos {data.pendingConsultations > 0 && <span className="badge cb-pendiente">{data.pendingConsultations} por atender</span>}</h2>
+      <p className="hint">Llegan solo cuando un revisor duda del contenido de una pregunta o discrepa con el docente. Puede responderlas usted o asignarlas a alguien de la especialidad.</p>
+      {!consults.data ? <Loading /> : consults.data.length === 0 ? <p className="empty">No hay consultas. No necesita intervenir.</p> : (
+        <ul className="list compact">
+          {consults.data.map((c) => (
+            <li key={c.id}>
+              <button className="row" onClick={() => go({ name: "item", id: c.itemId })}>
+                <div className="row-top">
+                  <span className="id">#{c.itemId}</span>
+                  <span className={`badge cb-${c.status}`}>{c.status === "pendiente" ? "Por atender" : c.status === "asignada" ? `Asignada a ${c.assignedTo?.replace(/\s*\(.*\)/, "")}` : "Resuelta"}</span>
+                  <span className="muted small">Pedida por {c.requestedBy.replace(/\s*\(.*\)/, "")}</span>
+                </div>
+                <p className="stem-line">{c.stem}</p>
+                <p className="small muted">Duda: {c.reason}</p>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <h2>Preguntas por asignatura</h2>
       <div className="table-wrap">

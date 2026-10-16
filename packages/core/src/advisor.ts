@@ -1,4 +1,4 @@
-import type { ItemPayload } from "./types";
+import { BLOOM_LABEL, type ItemPayload } from "./types";
 
 /**
  * Asesor por reglas (RF-04): revisa el ítem mientras se escribe y sugiere
@@ -9,6 +9,10 @@ export interface Suggestion {
   rule: string;
   severity: "info" | "aviso" | "importante";
   message: string;
+  /** Cómo corregirlo, en lenguaje simple. */
+  howTo: string;
+  /** Corrección automática disponible (se aplica con un clic y el docente la puede editar). */
+  fix?: { label: string; stem?: string; bloomLevel?: number };
 }
 
 /** Verbos frecuentes en programas técnicos, por nivel de la taxonomía de Bloom. */
@@ -46,8 +50,69 @@ export function detectBloomLevel(stem: string): { verb: string; level: number } 
   return null;
 }
 
-export function adviseItem(input: { stem: string; payload: ItemPayload; bloomLevel: number; difficulty: number }): Suggestion[] {
-  const out: Suggestion[] = [];
+type AdviceInput = { stem: string; payload: ItemPayload; bloomLevel: number; difficulty: number };
+
+export function adviseItem(input: AdviceInput): Suggestion[] {
+  return rawAdvice(input).map((s) => ({ ...s, ...solutionFor(s.rule, input) }));
+}
+
+const verbsOf = (level: number) => Object.entries(VERB_LEVELS).filter(([, l]) => l === level).slice(0, 4).map(([v]) => v).join(", ");
+const capital = (v: string) => v.charAt(0).toUpperCase() + v.slice(1);
+/** Imperativo usado en enunciados: identificar → Identifique, calcular → Calcule, describir → Describa. */
+const imperative = (v: string) => capital(v.replace(/car$/, "que").replace(/zar$/, "ce").replace(/gar$/, "gue").replace(/ar$/, "e").replace(/[ei]r$/, "a"));
+
+function solutionFor(rule: string, input: AdviceInput): Pick<Suggestion, "howTo" | "fix"> {
+  const stem = input.stem.trim();
+  switch (rule) {
+    case "enunciado_corto":
+      return { howTo: "Agregue la situación: quién, dónde y qué ocurre. Ej.: «Durante el control de signos vitales de un adulto en reposo, …»." };
+    case "nivel_por_verbo": {
+      const b = detectBloomLevel(stem)!;
+      return {
+        howTo: `Si la pregunta de verdad pide «${b.verb}», cambie el nivel. Si quiere mantener el nivel ${input.bloomLevel}, use otro verbo, por ejemplo: ${verbsOf(input.bloomLevel)}.`,
+        fix: { label: `Cambiar el nivel a ${b.level} · ${BLOOM_LABEL[b.level]}`, bloomLevel: b.level },
+      };
+    }
+    case "sin_verbo": {
+      const m = /^¿\s*cu[aá]l(?:es)?\s+(?:es|son)\s+(.+?)\?*$/i.exec(stem);
+      const verb = ["identificar", "identificar", "explicar", "aplicar", "analizar", "evaluar", "elaborar"][input.bloomLevel] ?? "identificar";
+      return {
+        howTo: `Empiece con un verbo del nivel ${input.bloomLevel} (${BLOOM_LABEL[input.bloomLevel]}), por ejemplo: ${verbsOf(input.bloomLevel)}.`,
+        ...(m ? { fix: { label: "Reescribir con un verbo", stem: `${imperative(verb)} ${m[1]!.replace(/\?$/, "")}.` } } : {}),
+      };
+    }
+    case "absolutos": {
+      const sentences = stem.split(/(?<=[.!?])\s+/);
+      const keep = sentences.filter((x) => !ABSOLUTES.some((a) => normalize(x).includes(normalize(a))));
+      return {
+        howTo: "Reemplace la palabra absoluta por la condición concreta (ej.: «antes del siguiente control») o quite la frase si no aporta.",
+        ...(keep.length && keep.length < sentences.length ? { fix: { label: "Quitar la frase con el absoluto", stem: keep.join(" ") } } : {}),
+      };
+    }
+    case "negacion":
+      return {
+        howTo: "Destaque la negación para que nadie la pase por alto, o reformule la pregunta en positivo.",
+        fix: { label: "Destacar la negación en MAYÚSCULAS", stem: stem.replace(/\bno\b/g, "NO").replace(/\bexcepto\b/gi, "EXCEPTO") },
+      };
+    case "contexto_laboral":
+      return { howTo: "Sitúe la pregunta en el trabajo real: «En el turno de mañana, en el servicio de medicina, un paciente…»." };
+    case "clave_mas_larga":
+      return { howTo: "Acorte la respuesta correcta o complete las incorrectas para que todas tengan un largo parecido." };
+    case "alternativas_vacias":
+      return { howTo: "Escriba todas las opciones o quite las que sobran con la «×» (mínimo 3)." };
+    case "alternativas_repetidas":
+      return { howTo: "Cambie una de las opciones repetidas por un error frecuente de los estudiantes." };
+    case "sin_retroalimentacion":
+      return { howTo: "En cada opción incorrecta, escriba por qué es un error. El estudiante lo verá al revisar su prueba." };
+    case "pareados_sin_distractores":
+      return { howTo: "Agregue en la columna B una o dos opciones que no calcen con ninguna de la columna A." };
+    default:
+      return { howTo: "" };
+  }
+}
+
+function rawAdvice(input: AdviceInput): Omit<Suggestion, "howTo">[] {
+  const out: Omit<Suggestion, "howTo">[] = [];
   const stem = input.stem.trim();
   const n = normalize(stem);
 

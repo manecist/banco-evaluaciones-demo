@@ -158,7 +158,33 @@ export interface ItemSummary {
   publishedVersionId: number | null;
 }
 
+export type ConsultationVerdict = "clave_correcta" | "clave_incorrecta" | "pregunta_ambigua";
+
+export interface Consultation {
+  id: number;
+  itemId: number;
+  stem: string;
+  careerId: number;
+  status: "pendiente" | "asignada" | "resuelta";
+  reason: string;
+  requestedBy: string;
+  assignedToId: number | null;
+  assignedTo: string | null;
+  verdict: ConsultationVerdict | null;
+  opinion: string | null;
+  resolvedBy: string | null;
+  createdAt: string;
+}
+
+export const consultationRequestSchema = z.object({ reason: z.string().trim().min(5, "Explique la duda (mínimo 5 caracteres)").max(2000) });
+export const consultationAssignSchema = z.object({ assigneeId: z.number().int() });
+export const consultationResolveSchema = z.object({
+  verdict: z.enum(["clave_correcta", "clave_incorrecta", "pregunta_ambigua"]),
+  opinion: z.string().trim().min(5, "Escriba su opinión (mínimo 5 caracteres)").max(4000),
+});
+
 export interface ItemDetail extends ItemSummary {
+  consultation: Consultation | null;
   versions: ItemVersion[];
   observations: { id: number; authorName: string; text: string; createdAt: string }[];
   audit: AuditEntry[];

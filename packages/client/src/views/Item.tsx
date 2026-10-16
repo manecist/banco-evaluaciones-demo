@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { adviseItem, allowedTransitions, type ItemVersion, type Status } from "@banco/core";
+import { adviseItem, allowedTransitions, type Consultation, type ItemDetail, type ItemVersion, type Status, type User } from "@banco/core";
 import type { AiReviewResult } from "../api";
 import { fmtDate, STATUS_LABEL, useApp, useLoad } from "../ctx";
-import { ErrorBox, ItemPreview, Loading, Meta, StatusBadge } from "./common";
+import { AiReviewOut, ErrorBox, ItemPreview, Loading, Meta, StatusBadge } from "./common";
 
 const ACTION_LABEL: Partial<Record<Status, string>> = {
   recepcionado: "Enviar a revisión",
@@ -38,6 +38,7 @@ export function ItemView({ id }: { id: number }) {
 
   const canEdit = can("item:edit_own") && (isAuthor || user.role === "area_curricular") && ["borrador", "devuelto", "visado"].includes(data.status) && !data.archived;
   const transitions = allowedTransitions(data.status);
+  const openConsult = !!data.consultation && data.consultation.status !== "resuelta";
 
   return (
     <section>
@@ -72,8 +73,11 @@ export function ItemView({ id }: { id: number }) {
           {transitions.includes("devuelto") && (
             <textarea placeholder="Comentario (obligatorio para devolver)" value={comment} onChange={(e) => setComment(e.target.value)} aria-label="Comentario de revisión" />
           )}
+          {openConsult && ["visado", "devuelto"].some((t) => transitions.includes(t as Status)) && (
+            <p className="warn small">Hay una consulta a experto abierta: podrá visar o devolver cuando llegue su opinión.</p>
+          )}
           <div className="actions wrap">
-            {transitions.map((to) => (
+            {transitions.filter((to) => !(openConsult && (to === "visado" || to === "devuelto"))).map((to) => (
               <button key={to} className={to === "visado" ? "primary" : ""} disabled={busy} onClick={() => run(() => api.transition(id, to, comment || undefined), `Estado: ${STATUS_LABEL[to]}`)}>
                 {ACTION_LABEL[to]}
               </button>
@@ -84,6 +88,7 @@ export function ItemView({ id }: { id: number }) {
         </div>
       </div>
 
+      <ConsultationBox data={data} isAuthor={isAuthor} onChange={reload} />
       {can("item:review") && !isAuthor && ["recepcionado", "en_revision"].includes(data.status) && <ReviewHelp v={data.current} />}
 
       <h2 className="section-title">Historial de esta pregunta</h2>
@@ -167,11 +172,6 @@ function detailText(d: Record<string, unknown> | null | undefined): string {
   return e.length ? e.map(([k, v]) => `${k}: ${typeof v === "boolean" ? (v ? "sí" : "no") : String(v)}`).join(" · ") : "—";
 }
 
-const KEY_LABEL: Record<AiReviewResult["keyAssessment"], string> = {
-  coherente: "Sin observaciones",
-  dudosa: "Conviene revisar",
-  sin_clave: "Sin respuesta correcta marcada",
-};
 
 /** Ayuda para quien revisa: pauta, observaciones automáticas y segunda opinión de IA. */
 function ReviewHelp({ v }: { v: ItemVersion }) {
@@ -210,20 +210,103 @@ function ReviewHelp({ v }: { v: ItemVersion }) {
           {v.payload.type === "seleccion_multiple" && (
             <>
               <h3>Segunda opinión de IA</h3>
-              <p className="hint">La IA revisa la pregunta y avisa si la respuesta marcada se ve dudosa. Es una ayuda: la decisión de visar es suya.</p>
+              <p className="hint">La IA dice qué alternativa cree correcta y por qué, y avisa si no coincide con la marcada. Es una ayuda: si hay duda, consulte a un experto. La decisión de visar es suya.</p>
               <button disabled={busy} onClick={ask}>{busy ? "Revisando…" : "Pedir segunda opinión"}</button>
-              {review && (
-                <div className="review-out">
-                  <p><span className={`badge rv-${review.keyAssessment}`}>{KEY_LABEL[review.keyAssessment]}</span></p>
-                  <p>{review.comment.replace("La respuesta correcta la sigue decidiendo usted.", "")}</p>
-                  {review.observations.length > 0 && <ul>{review.observations.map((o, i) => <li key={i}>{o}</li>)}</ul>}
-                  {review.simulated && <p className="small muted">Demo: proveedor de IA simulado, que revisa la forma de la pregunta. Con un proveedor real también comenta si el contenido técnico es correcto.</p>}
-                </div>
-              )}
+              {review && <AiReviewOut review={review} />}
             </>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+const VERDICT_LABEL: Record<string, string> = {
+  clave_correcta: "La respuesta marcada es correcta",
+  clave_incorrecta: "La respuesta marcada NO es correcta",
+  pregunta_ambigua: "La pregunta es ambigua o tiene más de una respuesta válida",
+};
+
+/** Consulta a un par experto cuando la revisora duda del contenido o discrepa con el docente. */
+function ConsultationBox({ data, isAuthor, onChange }: { data: ItemDetail; isAuthor: boolean; onChange(): void }) {
+  const { api, user, can, toast } = useApp();
+  const c: Consultation | null = data.consultation;
+  const [reason, setReason] = useState("");
+  const [verdict, setVerdict] = useState("clave_correcta");
+  const [opinion, setOpinion] = useState("");
+  const [assignee, setAssignee] = useState<number | "">("");
+  const [busy, setBusy] = useState(false);
+  const isJefatura = can("consult:assign") && !!c && c.careerId === user.careerId;
+  const users = useLoad(() => (isJefatura ? api.demoUsers() : Promise.resolve([] as User[])), [isJefatura]);
+  const open = !!c && c.status !== "resuelta";
+  const canRequest = can("consult:request") && !isAuthor && data.status === "en_revision" && !open;
+  const canResolve = open && (isJefatura || c!.assignedToId === user.id);
+
+  const run = async (fn: () => Promise<unknown>, ok: string) => {
+    setBusy(true);
+    try {
+      await fn();
+      toast(ok);
+      onChange();
+    } catch (e: any) {
+      toast([e.message, ...(e.issues ?? [])].join(" · "), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!c && !canRequest) return null;
+  const experts = (users.data ?? []).filter((u) => u.careerId === c?.careerId && u.id !== data.authorId && u.id !== user.id);
+
+  return (
+    <div className="card consult">
+      <h2>Consulta a un par experto</h2>
+      {!open && canRequest && (
+        <>
+          <p className="hint">
+            ¿Duda de la respuesta o no está de acuerdo con el docente, y el tema no es de su especialidad? Pida la opinión de un experto.
+            La consulta llega a la <b>jefatura de la carrera</b>, que la responde o la asigna a alguien de esa área. Solo se le avisa cuando hace falta.
+          </p>
+          <textarea placeholder="Explique la duda. Ej.: no estoy segura de que 36,5 °C sea la única respuesta válida." value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Motivo de la consulta" />
+          <div className="actions"><button disabled={busy || reason.trim().length < 5} onClick={() => run(() => api.requestConsultation(data.id, reason), "Consulta enviada a la jefatura de carrera")}>Consultar a un experto</button></div>
+        </>
+      )}
+      {c && (
+        <div className={`consult-state cs-${c.status}`}>
+          <p>
+            <span className={`badge cb-${c.status}`}>{c.status === "pendiente" ? "Esperando a la jefatura" : c.status === "asignada" ? `Asignada a ${c.assignedTo?.replace(/\s*\(.*\)/, "")}` : "Resuelta"}</span>
+            {" "}<span className="small muted">Pedida por {c.requestedBy.replace(/\s*\(.*\)/, "")}</span>
+          </p>
+          <p><b>Duda:</b> {c.reason}</p>
+          {c.status === "resuelta" && (
+            <p className="resolution"><b>{VERDICT_LABEL[c.verdict!]}.</b> {c.opinion} <span className="small muted">— {c.resolvedBy?.replace(/\s*\(.*\)/, "")}</span></p>
+          )}
+        </div>
+      )}
+      {open && isJefatura && (
+        <div className="assign">
+          <label>Asignar a un experto de la carrera
+            <select value={assignee} onChange={(e) => setAssignee(e.target.value ? Number(e.target.value) : "")}>
+              <option value="">Elija una persona…</option>
+              {experts.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </label>
+          <button disabled={busy || assignee === ""} onClick={() => run(() => api.assignConsultation(c!.id, Number(assignee)), "Consulta asignada")}>Asignar</button>
+          <p className="hint">O respóndala usted mismo/a abajo, si es su especialidad.</p>
+        </div>
+      )}
+      {canResolve && (
+        <div className="resolve">
+          <h3>{isJefatura ? "Responder como jefatura" : "Su opinión como experto/a"}</h3>
+          <div className="radios">
+            {Object.entries(VERDICT_LABEL).map(([k, v]) => (
+              <label key={k} className="check"><input type="radio" name="verdict" checked={verdict === k} onChange={() => setVerdict(k)} /> {v}</label>
+            ))}
+          </div>
+          <textarea placeholder="Fundamente brevemente (protocolo, norma o bibliografía)." value={opinion} onChange={(e) => setOpinion(e.target.value)} aria-label="Opinión del experto" />
+          <div className="actions"><button className="primary" disabled={busy || opinion.trim().length < 5} onClick={() => run(() => api.resolveConsultation(c!.id, { verdict, opinion }), "Opinión enviada a la revisora")}>Enviar opinión</button></div>
+        </div>
+      )}
     </div>
   );
 }

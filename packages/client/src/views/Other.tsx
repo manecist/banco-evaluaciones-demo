@@ -166,7 +166,8 @@ const ROLES: [string, string, string][] = [
   ["docente", "Paula Soto, Jorge Vera", "Escribe preguntas, las envía a revisión y arma pruebas con las preguntas aprobadas. Puede pedir ayuda a la IA."],
   ["revisor", "Camila Ruiz", "Revisa que cada pregunta esté correcta y bien escrita. La aprueba (visa) o la devuelve con un comentario. Nunca revisa sus propias preguntas."],
   ["area_curricular", "Andrea Muñoz", "Unidad que cuida la calidad curricular: carga los programas (asignaturas, resultados y criterios), define las reglas del asesor, puede revisar y aprobar en cualquier carrera, archiva preguntas obsoletas y revisa la auditoría. También puede redactar preguntas, por ejemplo con la IA, como apoyo a las carreras."],
-  ["jefatura", "Luis Pérez", "Jefe/a de carrera. Tiene un «Panel de carrera»: cuántas preguntas aprobadas hay por asignatura, qué está pendiente de revisión y qué pruebas tienen preguntas con problemas. No redacta ni aprueba: supervisa y decide (por ejemplo, pedir más preguntas en una asignatura)."],
+  ["docente", "Rosa Tapia", "Docente de Enfermería que en el demo actúa como par experto: la jefatura le asigna consultas cuando una revisora duda del contenido."],
+  ["jefatura", "Luis Pérez", "Jefe/a de carrera. Tiene un «Panel de carrera»: cuántas preguntas aprobadas hay por asignatura, qué está pendiente de revisión y qué pruebas tienen preguntas con problemas. No redacta ni aprueba: supervisa, atiende las consultas a experto cuando una revisora lo necesita (las responde o las asigna) y decide, por ejemplo, pedir más preguntas en una asignatura."],
   ["uta", "Marcela Díaz", "Unidad Técnico-Pedagógica: asesora a los docentes en cómo evaluar. En «Configuración» define la exigencia para la nota 4,0, la tolerancia de la tabla de especificaciones y cuántas respuestas se necesitan para confiar en el análisis. También analiza resultados y exporta a Moodle."],
   ["admin", "Administración", "Mantiene el sistema funcionando: en «Configuración» activa o desactiva la IA y fija su límite de uso, y revisa qué rol tiene cada persona. No interviene en el contenido de las preguntas."],
 ];
@@ -179,14 +180,16 @@ export function AboutView() {
       <p className="note"><b>Todos los datos son ficticios.</b> Personas, carreras, ítems y respuestas fueron inventados para la demostración. Este demo no es un sistema de ninguna institución.</p>
 
       <div className="card guide">
-        <h2>Cómo recorrer el demo en 10 minutos</h2>
+        <h2>Cómo recorrer el demo en 15 minutos</h2>
         <ol className="guide-steps">
           <li><b>Buscar.</b> Como Paula Soto (docente), en «Banco de ítems» escriba <i>presion</i> sin tilde: igual encuentra «presión».</li>
           <li><b>Crear una pregunta.</b> «+ Nueva pregunta» → «Cargar un ejemplo» → «Guardar pregunta». Mire los consejos del Asesor y pida una segunda opinión a la IA.</li>
           <li><b>Enviar a revisión.</b> En la pregunta guardada, presione «Enviar a revisión».</li>
-          <li><b>Aprobar.</b> «Cambiar rol» → Camila Ruiz (revisora). Abra la pregunta: «Tomar para revisión» → «Visar y publicar».</li>
-          <li><b>Armar una prueba.</b> Vuelva a Paula → «Instrumentos» → «+ Nueva prueba» → «Seleccionar todos» → «Crear prueba». Vea las formas A y B, la pauta, la impresión y la exportación a Moodle.</li>
-          <li><b>Analizar resultados.</b> En «Instrumentos», abra «Análisis de ítems» de la Prueba 1 (64 estudiantes ficticios).</li>
+          <li><b>Aprobar.</b> «Cambiar rol» → Camila Ruiz (revisora). Abra la pregunta: «Tomar para revisión», use la «Ayuda para revisar» → «Visar y publicar».</li>
+          <li><b>Consultar a un experto.</b> Si la revisora duda, usa «Consultar a un experto». Luis Pérez (jefatura) la asigna a Rosa Tapia, que responde; después la revisora decide.</li>
+          <li><b>Armar una prueba.</b> Vuelva a Paula → «Instrumentos» → «+ Nueva prueba» → «Seleccionar todos» → «Crear prueba». Vea las formas A y B, la pauta, la hoja de respuestas y la exportación a Moodle.</li>
+          <li><b>Corregir 40 hojas en segundos.</b> En la «Prueba 1» → «Corregir hojas de respuesta» → «Cargar 40 hojas escaneadas de ejemplo» → «Guardar notas». Luego abra su «Análisis de ítems».</li>
+          <li><b>Pasar pruebas antiguas al banco.</b> En «Banco de ítems» → «Importar prueba antigua» → «Usar una prueba escaneada de ejemplo».</li>
           <li><b>Revisar la trazabilidad.</b> Como Andrea Muñoz (Área Curricular), abra «Auditoría»: ahí queda registrado todo lo anterior.</li>
         </ol>
         <p className="hint">Al recargar la página, todo vuelve a su estado inicial.</p>
@@ -198,12 +201,12 @@ export function AboutView() {
           <table className="table">
             <tbody>
               {ROLES.map(([r, who, what]) => (
-                <tr key={r}><th scope="row" className="nowrap">{ROLE_LABEL[r]}<br /><small className="muted">{who}</small></th><td>{what}</td></tr>
+                <tr key={who}><th scope="row" className="nowrap">{ROLE_LABEL[r]}<br /><small className="muted">{who}</small></th><td>{what}</td></tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="hint">La revisión de contenido la hace un revisor de la misma especialidad que la pregunta. Si el revisor no domina el tema, la devuelve pidiendo un par experto; la IA y el asesor automático lo ayudan, pero no deciden.</p>
+        <p className="hint">La revisora cuenta con la pauta, el asesor automático y la segunda opinión de IA. Si aun así duda del contenido, consulta a un par experto: la jefatura solo interviene en ese caso. El flujo de aprobación (qué pasos y quién participa) lo configura cada institución.</p>
       </div>
 
       <div className="grid2">

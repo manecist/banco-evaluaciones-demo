@@ -1,142 +1,226 @@
-# Banco de Evaluaciones — demo técnico
-
-**Módulo de banco de ítems y evaluaciones para educación técnica de nivel superior**
-TypeScript · Node.js · API REST + OpenAPI · React · PostgreSQL 16 · Docker Compose
-
 <p align="center">
-  <a href="https://manecist.github.io/banco-evaluaciones-demo/"><b>▶&nbsp;&nbsp;Abrir el demo en línea</b></a><br />
-  <sub>https://manecist.github.io/banco-evaluaciones-demo/ · funciona completo en el navegador, sin instalar nada</sub>
+  <img
+    src="https://readme-typing-svg.herokuapp.com/?lines=Banco+de+Evaluaciones+%C2%B7+Demo+t%C3%A9cnico;TypeScript+%C2%B7+Node.js+%C2%B7+React+%C2%B7+PostgreSQL;Del+papel+a+lo+digital;La+IA+ayuda+%C2%B7+las+personas+deciden&center=true&width=980&height=70&duration=3500&pause=900&color=CB8BFF&size=25"
+    alt="Banco de Evaluaciones · demo técnico"
+  >
 </p>
 
-> [!IMPORTANT]
-> **Prueba de capacidad técnica con datos ficticios.** Este repositorio es una demostración elaborada por
-> Studios Conari SpA. No es un sistema de ninguna institución ni contiene información real: personas,
-> carreras, módulos, ítems y respuestas de estudiantes fueron inventados para el demo.
+<div align="center">
+
+# ✦ Banco de Evaluaciones ✦
+
+### 📝 Módulo de banco de preguntas y evaluaciones para educación técnica de nivel superior
+
+#### Demo técnico de 🎮 Studios Conari SpA · 🇨🇱 Concepción, Chile
+
+<br>
+
+[![Abrir el demo](https://img.shields.io/badge/▶%20ABRIR%20EL%20DEMO-En%20línea-FF8FD8?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1D3557)](https://manecist.github.io/banco-evaluaciones-demo/)
+
+**[manecist.github.io/banco-evaluaciones-demo](https://manecist.github.io/banco-evaluaciones-demo/)** · funciona completo en el navegador, sin instalar nada
+
+<br>
+
+![TypeScript](https://img.shields.io/badge/TypeScript-1D3557?style=for-the-badge&logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js_20+-7EC8FF?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-CB8BFF?style=for-the-badge&logo=react&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL_16-1D3557?style=for-the-badge&logo=postgresql&logoColor=white)
+![OpenAPI](https://img.shields.io/badge/OpenAPI_3.1-D4AF37?style=for-the-badge&logo=openapiinitiative&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker_Compose-7EC8FF?style=for-the-badge&logo=docker&logoColor=white)
 
 [![CI](https://github.com/manecist/banco-evaluaciones-demo/actions/workflows/ci.yml/badge.svg)](https://github.com/manecist/banco-evaluaciones-demo/actions/workflows/ci.yml)
 
-![Análisis de ítems](docs/capturas/10-analisis.png)
+</div>
+
+> [!IMPORTANT]
+> **Prueba de capacidad técnica con datos ficticios.** Este repositorio es una demostración elaborada por
+> Studios Conari SpA. **No es un sistema de ninguna institución** ni contiene información real: personas,
+> carreras, asignaturas, preguntas y respuestas de estudiantes fueron inventadas para el demo.
 
 ---
 
-## Qué incluye
+# ✦ La idea
 
-| Área | Qué se puede probar |
+Un banco de preguntas donde los docentes **escriben, revisan, reutilizan y analizan** sus evaluaciones, con un recorrido completo:
+
+<div align="center">
+
+**📄 Prueba en papel** → **🤖 Importación** → **✍️ Redacción guiada** → **🔎 Revisión** → **✅ Aprobación** → **🖨️ Formas A y B** → **⚡ Corrección automática** → **📊 Análisis**
+
+</div>
+
+<br>
+
+> **La IA ayuda, pero no decide: la respuesta correcta siempre la confirma una persona.**
+
+---
+
+# 🧩 Qué incluye
+
+### ✍️ Para el docente
+
+| | |
 |---|---|
-| **Banco de ítems** | Cinco tipos de ítem (selección múltiple, verdadero o falso, respuesta breve, pareados y desarrollo). Búsqueda en español que tolera tildes y errores de tipeo: «presion» encuentra «presión» (PostgreSQL `unaccent` + `pg_trgm`). |
-| **Metadatos curriculares** | Carrera, módulo, resultado de aprendizaje, criterio de evaluación, nivel de Bloom, dificultad y versión del programa. |
-| **Guía para el docente** | Formulario en 5 pasos con preguntas simples, ayuda bajo cada campo, botón «Cargar un ejemplo» y un «torpedo» con los niveles de Bloom, consejos para buenas alternativas y qué pasa después de guardar. Cada pantalla indica «¿Qué sigue?». |
-| **Asesor de redacción** | Reglas explicables mientras se escribe: verbo del enunciado frente al nivel de Bloom declarado, absolutos («nunca», «siempre»), clave más larga que los distractores, falta de retroalimentación. Cada sugerencia se acepta o se descarta y la decisión queda registrada. |
-| **Flujo de visación** | Borrador → recepcionado → en revisión → visado o devuelto. Las reglas se verifican en el servidor: nadie visa lo propio y devolver exige un comentario. |
-| **Versiones inmutables** | Cada cambio crea una versión nueva. Un *trigger* de PostgreSQL rechaza cualquier modificación o borrado de una versión existente. Editar un ítem visado crea un borrador y la versión publicada sigue vigente. |
-| **Armado de pruebas** | Tabla de especificaciones con pesos por resultado de aprendizaje (deben sumar 100 %), solo con ítems visados, semáforo de cobertura en vivo y estimación del tiempo de respuesta. |
-| **Formas A y B** | Orden de preguntas y alternativas barajado con semilla (reproducible), tabla de conversión de puntaje a nota 1,0–7,0 con exigencia configurable, pauta de corrección separada e impresión o PDF desde el navegador. |
-| **Moodle** | Exportación de una prueba al formato XML de Moodle (solo ítems visados). |
-| **Análisis de ítems** | Dificultad (p), discriminación (D, grupos 27 % superior e inferior), punto biserial corregida, alertas con prioridad y distribución de alternativas por grupo alto y bajo. Usa 64 respuestas simuladas. |
-| **Asistente de IA** | Genera borradores a partir de un resultado de aprendizaje. Antes de enviar el texto elimina RUT, correos y teléfonos; valida la respuesta contra un esquema; los borradores quedan marcados y pasan por la misma visación humana. En el demo el proveedor es **simulado**, sin costo y sin llamadas externas. |
-| **Segunda opinión de IA** | El docente, y también la revisora (que puede no ser experta en la materia), piden a la IA que revise la pregunta: avisa si la respuesta marcada se ve dudosa, si hay dos opciones válidas o si las incorrectas no son creíbles. **Nunca elige ni cambia la respuesta correcta**: decide una persona. |
-| **Asesor con soluciones** | Cada consejo explica cómo corregirlo y, cuando se puede, ofrece la corrección con un clic (por ejemplo, reescribir el enunciado con un verbo o ajustar el nivel de Bloom). |
-| **Consulta a par experto** | Si la revisora duda del contenido o discrepa con el docente, pide la opinión de un experto. La jefatura de carrera solo interviene entonces: responde o asigna a alguien de la especialidad. Mientras la consulta está abierta no se puede visar, y la opinión queda registrada. |
-| **Importar pruebas antiguas** | El docente sube una prueba que ya tiene (papel escaneado, Word o PDF); el texto se separa en preguntas, alternativas y respuesta correcta, el docente confirma y entran como borradores. En el demo, el reconocimiento de texto está simulado con un ejemplo y los archivos de texto se leen directamente. |
-| **Corrección de hojas de respuesta** | Hoja de respuestas imprimible para lector óptico. Se sube el archivo de marcas (o una exportación de Moodle) y el sistema corrige por forma, calcula notas, avisa qué hojas revisar a mano (doble marca, en blanco), descarga las notas y alimenta el análisis de ítems. |
-| **Ayuda para revisar** | La revisora ve una pauta de revisión, lo que detectó el asesor automático y la segunda opinión de IA. Si el tema no es de su especialidad, la pauta indica devolver la pregunta pidiendo un par experto. |
-| **Roles con función propia** | **Jefatura:** panel de su carrera (preguntas aprobadas por asignatura, pendientes y pruebas con alertas). **UTA:** ajustes pedagógicos (exigencia, tolerancia, respuestas mínimas). **Administración:** ajustes técnicos (IA y límites) y usuarios y roles. Cada ajuste solo lo cambia su rol, verificado en el servidor. |
-| **Roles y auditoría** | Seis roles (docente, jefatura de carrera, revisor/a, Área Curricular, UTA, administración) y un flujo de aprobación pensado para ser configurable por la institución con una matriz de permisos aplicada en cada ruta de la API, más una bitácora de auditoría de solo lectura. |
+| 📝 **Nueva pregunta en 5 pasos** | Ayuda bajo cada campo, ejemplo de un clic y un **torpedo** con los niveles de Bloom, consejos para buenas alternativas y qué pasa después de guardar. |
+| 💡 **Asesor con soluciones** | Revisa mientras se escribe (verbo y nivel de Bloom, absolutos como «nunca», clave más larga, alternativas repetidas). Cada consejo explica **cómo corregirlo** y, cuando se puede, lo **arregla con un clic**. |
+| 🤖 **Segunda opinión de IA** | Dice qué alternativa considera correcta, por qué, y si coincide con la marcada. Antes de enviar el texto elimina RUT, correos y teléfonos, y valida la respuesta contra un esquema. |
+| 📄 **Importar pruebas antiguas** | Una prueba escaneada, en Word o PDF se separa en preguntas, alternativas y respuesta correcta; el docente confirma y entran como borradores. |
+| 🔍 **Búsqueda en español** | Tolera tildes y errores de tipeo: «presion» encuentra «presión» (`unaccent` + `pg_trgm`). |
 
-**No incluye**, por ser un demo: inicio de sesión institucional real (SSO/OIDC), integración con un SGA o Aula Virtual reales, un proveedor de IA real ni un motor PDF institucional.
+### 🔎 Para la revisión
 
-## Arquitectura
+| | |
+|---|---|
+| ✅ **Flujo de visación** | Borrador → recepcionado → en revisión → visado o devuelto. Nadie aprueba sus propias preguntas y devolver exige un comentario (verificado en el servidor). |
+| 🧭 **Ayuda para revisar** | Pauta de revisión, lo que detectó el asesor y la segunda opinión de IA. |
+| 👩‍⚕️ **Consulta a par experto** | Si la revisora duda o discrepa con el docente, pide la opinión de un experto. La **jefatura solo interviene en ese caso**: responde o asigna a alguien de la especialidad. Mientras tanto, la pregunta no se puede aprobar. |
+| 🔒 **Versiones inmutables** | Cada cambio crea una versión nueva; un *trigger* de PostgreSQL impide modificar o borrar las anteriores. Todo queda en la auditoría. |
 
-```
-banco-evaluaciones-demo/
-├── packages/core     Modelo de datos y reglas de negocio (TypeScript puro)
-│   ├── schema.ts         Tablas PostgreSQL, extensiones, trigger de inmutabilidad
-│   ├── types.ts          Esquemas Zod (validación de entrada compartida)
-│   ├── permissions.ts    Matriz de roles y flujo de visación
-│   ├── repo.ts           Capa de datos (SQL parametrizado)
-│   ├── advisor.ts        Asesor por reglas y semáforo de cobertura
-│   ├── analysis.ts       p, D y punto biserial corregida
-│   ├── grading.ts        Conversión a nota y barajado con semilla
-│   ├── moodle.ts         Exportación a XML de Moodle
-│   ├── ai.ts             Filtro de datos personales y validación por esquema
-│   └── seed.ts           Datos ficticios
-├── packages/server   API REST: Express 5 + pg + JWT + OpenAPI 3.1 generado desde Zod
-├── packages/client   Interfaz React 19 + Vite
-├── docs/             Demo estático publicado en GitHub Pages (+ capturas)
-├── Dockerfile · docker-compose.yml · .env.example
-└── .github/workflows/ci.yml
-```
+### 🖨️ Pruebas y resultados
 
-La misma capa de datos (`packages/core`) se usa de dos formas:
+| | |
+|---|---|
+| 📐 **Tabla de especificaciones** | Pesos por resultado de aprendizaje que suman 100 %, solo preguntas aprobadas, semáforo de cobertura en vivo y tiempo estimado. |
+| 🔀 **Formas A y B** | Preguntas y alternativas barajadas con semilla (reproducible), tabla de conversión a nota 1,0–7,0, pauta separada, impresión o PDF y exportación a **Moodle XML**. |
+| ⚡ **Corrección de hojas de respuesta** | Hoja imprimible para lector óptico. Se sube el archivo de marcas y el sistema **corrige en segundos**: notas, hojas a revisar a mano (doble marca, en blanco) y descarga de resultados. |
+| 📊 **Análisis de ítems** | Dificultad (p), discriminación (D, 27 %), punto biserial corregida, alertas **PRIORITARIAS** y distribución de alternativas por grupo alto y bajo. Se actualiza con las hojas corregidas. |
 
-- **Con servidor:** React → API REST (`/api`, especificación en `/api/openapi.json`) → PostgreSQL 16.
-- **Demo en línea:** React → `packages/core` → **PGlite**, que es PostgreSQL compilado a WebAssembly y corre dentro del navegador. Se ejecuta el mismo SQL, con los mismos permisos y validaciones, sin servidor. Los datos vuelven a su estado inicial al recargar la página.
+### 👥 Cada rol con su función
 
-## Cómo probarlo
+| Rol | Qué hace |
+|---|---|
+| 💻 **Docente** | Escribe preguntas, importa pruebas antiguas, arma pruebas y corrige hojas. |
+| 🔎 **Revisor/a** | Revisa, aprueba o devuelve; consulta a un experto cuando lo necesita. |
+| 📚 **Área Curricular** | Cuida la calidad: programas, reglas, revisión en todas las carreras y archivo. |
+| 🎓 **Jefatura de carrera** | Panel de su carrera y atención de consultas a experto. |
+| 🧑‍🏫 **UTA** | Ajustes pedagógicos: exigencia, tolerancia y respuestas mínimas para el análisis. |
+| ⚙️ **Administración** | Ajustes técnicos (IA y límites de uso) y usuarios y roles. |
+
+El flujo de aprobación está pensado para ser **configurable por la institución**: una carrera pequeña puede usar solo docente → revisor → aprobada.
+
+**No incluye**, por ser un demo: inicio de sesión institucional real (SSO), integración con sistemas académicos reales, un proveedor de IA real ni un lector óptico real. La IA, el reconocimiento de texto de archivos y las hojas escaneadas están **simulados** con ejemplos.
+
+---
+
+# ✦ Galería
+
+<div align="center">
+
+<p align="center">
+  <a href="docs/capturas/03-editor-asesor.png"><img src="docs/capturas/galeria/03-editor-asesor.png" width="47%" alt="Nueva pregunta con asesor, segunda opinión de IA y torpedo"></a>
+  &nbsp;
+  <a href="docs/capturas/04a-ayuda-revisora.png"><img src="docs/capturas/galeria/04a-ayuda-revisora.png" width="47%" alt="Ayuda para revisar"></a>
+</p>
+<sub>Nueva pregunta en 5 pasos · Ayuda para la revisora</sub>
+
+<p align="center">
+  <a href="docs/capturas/18-importar-prueba.png"><img src="docs/capturas/galeria/18-importar-prueba.png" width="47%" alt="Importar una prueba antigua escaneada"></a>
+  &nbsp;
+  <a href="docs/capturas/19-corregir-hojas.png"><img src="docs/capturas/galeria/19-corregir-hojas.png" width="47%" alt="Corrección de 40 hojas de respuesta"></a>
+</p>
+<sub>Importar una prueba antigua · Corregir 40 hojas en segundos</sub>
+
+<p align="center">
+  <a href="docs/capturas/04c-experta-responde.png"><img src="docs/capturas/galeria/04c-experta-responde.png" width="47%" alt="Consulta a par experto"></a>
+  &nbsp;
+  <a href="docs/capturas/10-analisis.png"><img src="docs/capturas/galeria/10-analisis.png" width="47%" alt="Análisis de ítems"></a>
+</p>
+<sub>Consulta a par experto · Análisis de ítems</sub>
+
+<p align="center">
+  <a href="docs/capturas/07-forma-a.png"><img src="docs/capturas/galeria/07-forma-a.png" width="47%" alt="Forma A imprimible"></a>
+  &nbsp;
+  <a href="docs/capturas/15-panel-jefatura.png"><img src="docs/capturas/galeria/15-panel-jefatura.png" width="47%" alt="Panel de la jefatura de carrera"></a>
+</p>
+<sub>Forma A imprimible · Panel de la jefatura</sub>
+
+<p align="center">
+  <a href="docs/capturas/01-inicio.png"><img src="docs/capturas/galeria/01-inicio.png" width="47%" alt="Inicio con roles ficticios"></a>
+  &nbsp;
+  <img src="docs/capturas/14-movil-380.png" width="22%" alt="Vista en celular">
+</p>
+<sub>Inicio con roles ficticios · Vista en celular (380 px)</sub>
+
+</div>
+
+---
+
+# 🚀 Cómo probarlo
 
 ### 1. En línea (recomendado)
 
-Abra **https://manecist.github.io/banco-evaluaciones-demo/** y elija una persona ficticia. Un recorrido sugerido:
+Abra **[el demo](https://manecist.github.io/banco-evaluaciones-demo/)** y elija una persona ficticia. Recorrido sugerido:
 
-1. **Paula Soto (docente):** busque «presion» en el banco. Luego «+ Nueva pregunta» → «Cargar un ejemplo», pida la segunda opinión de IA, guarde y envíe a revisión.
-2. **Camila Ruiz (revisora):** abra esa pregunta, tómela para revisión y use la «Ayuda para revisar». Pruebe «Consultar a un experto»: **Luis Pérez (jefatura)** la asigna a **Rosa Tapia**, que responde; luego Camila la visa.
-3. **Paula Soto:** en *Instrumentos*, arme una prueba nueva y revise el semáforo de cobertura. Después vea las formas A y B y la pauta, imprímala y expórtela a Moodle.
-4. En la «Prueba 1», use *Corregir hojas de respuesta* → «Cargar 40 hojas escaneadas de ejemplo» → «Guardar notas». Luego abra su *Análisis de ítems*. En el banco, pruebe también *Importar prueba antigua*.
-5. **Luis Pérez (jefatura):** vea el *Panel de carrera*. **Marcela Díaz (UTA)** y **Administración:** vea la *Configuración* de cada uno.
-6. **Andrea Muñoz (Área Curricular):** revise la *Auditoría*, donde aparece todo lo anterior.
+1. **Paula Soto (docente):** busque «presion». Luego «+ Nueva pregunta» → «Cargar un ejemplo» → pida la segunda opinión de IA → guarde → «Enviar a revisión».
+2. **Camila Ruiz (revisora):** abra la pregunta, tómela para revisión y use la «Ayuda para revisar». Pruebe «Consultar a un experto».
+3. **Luis Pérez (jefatura):** en su panel, asigne la consulta a **Rosa Tapia**, que responde. Después Camila aprueba.
+4. **Paula:** «Importar prueba antigua» con el ejemplo escaneado. En «Instrumentos», arme una prueba y vea las formas A y B, la pauta y la hoja de respuestas.
+5. **Prueba 1:** «Corregir hojas de respuesta» → «Cargar 40 hojas escaneadas de ejemplo» → «Guardar notas» → «Análisis de ítems».
+6. **Marcela Díaz (UTA)** y **Administración:** «Configuración». **Andrea Muñoz (Área Curricular):** «Auditoría».
+
+Al recargar la página, todo vuelve a su estado inicial.
 
 ### 2. Con Docker (API + PostgreSQL 16)
-
-Requiere Docker con Compose.
 
 ```bash
 cp .env.example .env      # luego reemplace las claves de ejemplo
 docker compose up --build
 ```
 
-Abra http://localhost:3000. La primera vez se crean las tablas y los datos ficticios; la especificación OpenAPI queda en http://localhost:3000/api/openapi.json.
+Abra http://localhost:3000 · especificación OpenAPI en http://localhost:3000/api/openapi.json
 
-### 3. Desarrollo local
-
-Requiere Node.js 20 o superior.
+### 3. Desarrollo local (Node.js 20+)
 
 ```bash
 npm install
 npm run dev:demo          # demo en el navegador con PGlite (sin base de datos)
 ```
 
-Para trabajar contra PostgreSQL: defina `DATABASE_URL` y `JWT_SECRET`, ejecute `npm run migrate -w @banco/server` y después `npm run dev:server` junto con `npm run dev:client`.
+Para trabajar contra PostgreSQL: defina `DATABASE_URL` y `JWT_SECRET`, ejecute `npm run migrate -w @banco/server` y luego `npm run dev:server` junto con `npm run dev:client`.
 
-## Pruebas
+---
+
+# ⚙️ Arquitectura
+
+| Paquete | Contenido |
+|---|---|
+| 🧱 **`packages/core`** | Modelo PostgreSQL, esquemas Zod, permisos, asesor, análisis, notas, formas y corrección de hojas, Moodle, IA e importación. TypeScript puro. |
+| 🌐 **`packages/server`** | API REST con Express 5 + `pg`, sesión JWT de demostración y **OpenAPI 3.1 generado desde los mismos esquemas** que validan cada ruta. |
+| 🎨 **`packages/client`** | Interfaz React + Vite, responsiva hasta 380 px, con foco visible y contraste AA. |
+
+La **misma capa de datos** funciona de dos formas:
+
+- **Con servidor:** React → API REST → PostgreSQL 16.
+- **Demo en línea:** React → `packages/core` → **PGlite**, que es PostgreSQL compilado a WebAssembly dentro del navegador: el mismo SQL, los mismos permisos y las mismas validaciones, sin servidor.
+
+---
+
+# 🧪 Pruebas
 
 ```bash
 npm run typecheck         # TypeScript estricto en los tres paquetes
 npm test                  # Vitest: núcleo y API
-npm run build:demo        # genera el demo estático en docs/
+npm run build:demo        # demo estático en docs/
 ```
 
-Las 36 pruebas automatizadas corren sobre PostgreSQL real (PGlite). Cubren, entre otras cosas: búsqueda sin tildes y con errores de tipeo, inmutabilidad de versiones a nivel de base de datos, reglas del flujo de visación, visibilidad por rol, pruebas armadas solo con ítems visados, conversión a nota, barajado reproducible, análisis de ítems, eliminación de datos personales, exportación a Moodle, segunda opinión de IA (sin cambiar la clave), configuración por rol, panel de jefatura, consulta a par experto, importación de pruebas antiguas, corrección de hojas de respuesta y permisos verificados en la API. Además, la integración continua (GitHub Actions) ejecuta la revisión de tipos, las pruebas, el build del demo y el build de la imagen Docker en cada cambio.
+**36 pruebas automatizadas** sobre PostgreSQL real (PGlite). Cubren, entre otras cosas, la búsqueda tolerante, la inmutabilidad de versiones, las reglas de visación, la consulta a experto, los permisos por rol, la importación de pruebas antiguas, la corrección de hojas, el análisis de ítems y la API. **GitHub Actions** ejecuta en cada cambio la revisión de tipos, las pruebas, el build del demo y el build de la imagen Docker.
 
-## Capturas
+---
 
-| | |
-|---|---|
-| ![Inicio con roles ficticios](docs/capturas/01-inicio.png) | ![Búsqueda tolerante a tildes](docs/capturas/02-busqueda.png) |
-| Inicio: cada rol explica qué hace | Banco de ítems con guía y búsqueda de «presion» |
-| ![Editor con asesor](docs/capturas/03-editor-asesor.png) | ![Ayuda para la revisora](docs/capturas/04a-ayuda-revisora.png) |
-| Nueva pregunta en 5 pasos, asesor, segunda opinión de IA y torpedo | Ayuda para revisar: pauta, asesor y segunda opinión |
-| ![Asesor con soluciones](docs/capturas/03b-asesor-soluciones.png) | ![Consulta a experto](docs/capturas/04c-experta-responde.png) |
-| Asesor con soluciones de un clic | Consulta a par experto: la experta responde |
-| ![Importar prueba antigua](docs/capturas/18-importar-prueba.png) | ![Corregir hojas](docs/capturas/19-corregir-hojas.png) |
-| Importar una prueba antigua escaneada | Corrección de 40 hojas de respuesta |
-| ![Nueva prueba](docs/capturas/06-nueva-prueba.png) | ![Forma A](docs/capturas/07-forma-a.png) |
-| Tabla de especificaciones con semáforo | Forma A imprimible con conversión a nota |
-| ![Análisis](docs/capturas/10-analisis.png) | ![Panel de jefatura](docs/capturas/15-panel-jefatura.png) |
-| Análisis de ítems con alerta prioritaria | Panel de carrera para la jefatura |
-| ![Configuración](docs/capturas/17-configuracion-admin.png) | ![Vista móvil](docs/capturas/14-movil-380.png) |
-| Configuración por rol y usuarios | Vista en pantalla de 380 px |
+<div align="center">
 
-## Licencia
+## ✦ Tecnología · Educación · Construcción de proyectos ✦
 
-© 2026 Studios Conari SpA. Todos los derechos reservados. Ver [`LICENSE`](LICENSE).
-Los componentes de terceros (React, Node.js, Express, PostgreSQL, PGlite, Zod, Vite y otros) se rigen por sus propias licencias.
+### 🎮 Studios Conari SpA
+
+[![GitHub](https://img.shields.io/badge/GitHub-manecist-CB8BFF?style=for-the-badge&logo=github&logoColor=white&labelColor=1D3557)](https://github.com/manecist)
+[![Studios Conari](https://img.shields.io/badge/Studios%20Conari-Web-D4AF37?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1D3557)](https://studiosconari.github.io/)
+[![Email](https://img.shields.io/badge/Email-studiosconari%40gmail.com-7EC8FF?style=for-the-badge&logo=gmail&logoColor=white&labelColor=1D3557)](mailto:studiosconari@gmail.com)
+
+<br>
+
+© 2026 Studios Conari SpA. Todos los derechos reservados · ver [`LICENSE`](LICENSE)
+
+<sub>Los componentes de terceros (React, Node.js, Express, PostgreSQL, PGlite, Zod, Vite y otros) se rigen por sus propias licencias.</sub>
+
+</div>

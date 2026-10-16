@@ -7,8 +7,9 @@ const docsDir = fileURLToPath(new URL("../../docs", import.meta.url));
 
 /**
  * Vacía docs/ antes de compilar el demo, pero conserva las capturas de
- * pantalla que usa el README (docs/capturas). Equivale a emptyOutDir: true
- * con una excepción.
+ * pantalla (docs/capturas) y el informe de la prueba de integración con Moodle
+ * (docs/prueba-integracion-moodle). Equivale a emptyOutDir: true
+ * con esas excepciones.
  */
 function cleanDocs(keep: string[]): Plugin {
   return {
@@ -28,7 +29,7 @@ export default defineConfig(({ mode }) => {
   return {
     // Rutas relativas: el demo funciona en cualquier subruta (p. ej. GitHub Pages /banco-evaluaciones-demo/).
     base: demo ? "./" : "/",
-    plugins: [react(), ...(demo ? [cleanDocs(["capturas"])] : [])],
+    plugins: [react(), ...(demo ? [cleanDocs(["capturas", "prueba-integracion-moodle"])] : [])],
     // En el demo, public-demo/ aporta .nojekyll para GitHub Pages.
     publicDir: demo ? "public-demo" : "public",
     optimizeDeps: { exclude: ["@electric-sql/pglite"] },
@@ -37,7 +38,7 @@ export default defineConfig(({ mode }) => {
       target: "es2022",
       chunkSizeWarningLimit: 4000,
       outDir: demo ? docsDir : "dist",
-      emptyOutDir: !demo, // en el demo lo hace cleanDocs (conserva docs/capturas)
+      emptyOutDir: !demo, // en el demo lo hace cleanDocs (conserva docs/capturas y el informe de integración)
     },
   };
 });

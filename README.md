@@ -19,6 +19,10 @@
 
 **[manecist.github.io/banco-evaluaciones-demo](https://manecist.github.io/banco-evaluaciones-demo/)** · funciona completo en el navegador, sin instalar nada
 
+### [✅ Prueba de integración con Moodle 4.5 realizada: ver informe](docs/prueba-integracion-moodle/)
+
+<sub>16-10-2026 · ida y vuelta con un Moodle 4.5 real (ambiente QA en Google Cloud Run) · 9 de 9 preguntas reconocidas · notas idénticas · sin datos personales</sub>
+
 <br>
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-1D3557?style=for-the-badge&logo=typescript&logoColor=white)
@@ -82,7 +86,7 @@ Un banco de preguntas donde los docentes **escriben, revisan, reutilizan y anali
 |---|---|
 | 📐 **Tabla de especificaciones** | Pesos por resultado de aprendizaje que suman 100 %, solo preguntas aprobadas, semáforo de cobertura en vivo y tiempo estimado. |
 | 🔀 **Formas A y B** | Preguntas y alternativas barajadas con semilla (reproducible), tabla de conversión a nota 1,0–7,0, pauta separada, impresión o PDF y exportación a **Moodle XML**. |
-| 🔄 **Integración con Moodle** | Ida y vuelta: la prueba se **envía a Moodle** (XML), los estudiantes la rinden en línea con **nota al instante**, y el **informe de respuestas vuelve al banco sin nombres ni correos**. Cada respuesta se calza con su pregunta aunque Moodle baraje el orden, y se actualiza el análisis. Guía paso a paso: [`GUIA-MOODLE.md`](GUIA-MOODLE.md). |
+| 🔄 **Integración con Moodle** | Ida y vuelta: la prueba se **envía a Moodle** (XML), los estudiantes la rinden en línea con **nota al instante**, y el **informe de respuestas vuelve al banco sin nombres ni correos**. Cada respuesta se calza con su pregunta aunque Moodle baraje el orden, y se actualiza el análisis. Guía paso a paso: [`GUIA-MOODLE.md`](GUIA-MOODLE.md) · ✅ [Informe de la prueba real con Moodle 4.5](docs/prueba-integracion-moodle/). |
 | ⚡ **Corrección de hojas de respuesta** | Hoja imprimible para lector óptico. Se sube el archivo de marcas y el sistema **corrige en segundos**: notas, hojas a revisar a mano (doble marca, en blanco) y descarga de resultados. |
 | 📊 **Análisis de ítems** | Dificultad (p), discriminación (D, 27 %), punto biserial corregida y distribución de notas. Alertas con explicación: **PRIORITARIAS** (clave probablemente errónea, pregunta ambigua, discriminación negativa) y **menores** (muy fácil, muy difícil, distractor que nadie elige). Muestra el **origen de los datos** (simulados, hojas escaneadas, Moodle) y permite filtrar por cada uno. |
 

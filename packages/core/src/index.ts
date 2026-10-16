@@ -5,6 +5,7 @@ export * from "./analysis";
 export * from "./grading";
 export * from "./sheets";
 export * from "./legacy";
+export * from "./moodleResults";
 export * from "./moodle";
 export * from "./ai";
 export * from "./repo";

@@ -189,6 +189,7 @@ export function AboutView() {
           <li><b>Consultar a un experto.</b> Si la revisora duda, usa «Consultar a un experto». Luis Pérez (jefatura) la asigna a Rosa Tapia, que responde; después la revisora decide.</li>
           <li><b>Armar una prueba.</b> Vuelva a Paula → «Instrumentos» → «+ Nueva prueba» → «Seleccionar todos» → «Crear prueba». Vea las formas A y B, la pauta, la hoja de respuestas y la exportación a Moodle.</li>
           <li><b>Corregir 40 hojas en segundos.</b> En la «Prueba 1» → «Corregir hojas de respuesta» → «Cargar 40 hojas escaneadas de ejemplo» → «Guardar notas». Luego abra su «Análisis de ítems».</li>
+          <li><b>Prueba en línea con Moodle.</b> En la «Prueba 1» → «Importar resultados de Moodle» → «Usar un informe de ejemplo»: llegan sin nombres ni correos y actualizan el análisis.</li>
           <li><b>Pasar pruebas antiguas al banco.</b> En «Banco de ítems» → «Importar prueba antigua» → «Usar una prueba escaneada de ejemplo».</li>
           <li><b>Revisar la trazabilidad.</b> Como Andrea Muñoz (Área Curricular), abra «Auditoría»: ahí queda registrado todo lo anterior.</li>
         </ol>

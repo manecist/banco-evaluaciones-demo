@@ -300,6 +300,7 @@ export function InstrumentView({ id }: { id: number }) {
             <button className="primary" onClick={() => window.print()}>Imprimir / guardar PDF</button>
             {can("export:moodle") && <button disabled={exporting} onClick={exportXml}>{exporting ? "Exportando…" : "Exportar a Moodle (XML)"}</button>}
             {can("instrument:create") && <button onClick={() => go({ name: "sheets", id })}>Corregir hojas de respuesta</button>}
+            {can("instrument:create") && <button onClick={() => go({ name: "moodle", id })}>Importar resultados de Moodle</button>}
             {can("analysis:read") && <button className="ghost" onClick={() => go({ name: "analysis", id })}>Análisis de ítems</button>}
           </div>
         </div>

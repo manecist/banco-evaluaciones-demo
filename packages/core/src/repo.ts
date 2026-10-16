@@ -2,6 +2,7 @@ import { z } from "zod";
 import { generateItems, reviewItem, simulatedProvider, simulatedReviewer, type AiRequest, type AiReviewRequest } from "./ai";
 import { analyzeItems, type AnswerRow } from "./analysis";
 import { LETTERS } from "./grading";
+import { parseMoodleResponses } from "./moodleResults";
 import { buildForms, gradeSheets, originalChoice, parseSheetsCsv, type FormName } from "./sheets";
 import { toMoodleXml } from "./moodle";
 import {
@@ -743,6 +744,34 @@ export async function saveSheetResults(db: Db, user: User, instrumentId: number,
     await audit(tx, user.id, "corregir_hojas", "instrument", instrumentId, { hojas: rows.length, guardadas: saved, repetidas: skipped });
   });
   return { saved, skipped, summary };
+}
+
+/** Guarda los resultados que vienen de Moodle (sin datos personales) y alimenta el análisis de ítems. */
+export async function saveMoodleResults(db: Db, user: User, instrumentId: number, csv: string) {
+  assertCan(user, "instrument:create");
+  const ins = await getInstrument(db, user, instrumentId);
+  const r = parseMoodleResponses(csv, ins.items, ins.exigency);
+  if (r.mapped.length === 0) throw new ValidationError("No se reconoció ninguna pregunta de esta prueba en el archivo de Moodle");
+  let saved = 0;
+  let skipped = 0;
+  const points = new Map(ins.items.map((v) => [v.id, v.points]));
+  await db.tx(async (tx) => {
+    for (const s of r.students) {
+      const a = await tx.query<Row>(
+        `INSERT INTO attempt (instrument_id, student_code) VALUES ($1, $2) ON CONFLICT (instrument_id, student_code) DO NOTHING RETURNING id`,
+        [instrumentId, s.code],
+      );
+      if (!a.rows[0]) { skipped++; continue; }
+      saved++;
+      for (const x of s.answers) {
+        await tx.query(`INSERT INTO answer (attempt_id, item_version_id, choice, score) VALUES ($1,$2,$3,$4)`, [
+          a.rows[0].id, x.itemVersionId, x.choice, x.correct ? points.get(x.itemVersionId) ?? 0 : 0,
+        ]);
+      }
+    }
+    await audit(tx, user.id, "importar_moodle", "instrument", instrumentId, { estudiantes: r.students.length, guardados: saved, repetidos: skipped, preguntas: r.mapped.length, datos_personales_eliminados: r.personalColumnsRemoved.length });
+  });
+  return { saved, skipped, mapped: r.mapped.length, unmatched: r.unmatched.length };
 }
 
 export async function listAudit(db: Db, user: User, limit = 100): Promise<AuditEntry[]> {

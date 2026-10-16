@@ -82,7 +82,7 @@ export function SheetsView({ id }: { id: number }) {
           <li>Pase las hojas por el <b>lector óptico</b> o fotografíelas con una app de escaneo: se genera un archivo con las marcas.</li>
           <li>Súbalo aquí. El sistema <b>corrige en segundos</b> con la pauta de cada forma, calcula la nota y le avisa qué hojas revisar a mano.</li>
         </ol>
-        <p className="hint">También sirve para pruebas aplicadas en Moodle: exporte las respuestas a una planilla con el mismo formato.</p>
+        <p className="hint">¿La prueba se rindió en línea? Use «Importar resultados de Moodle» en la página de la prueba.</p>
       </div>
 
       <div className="card form">

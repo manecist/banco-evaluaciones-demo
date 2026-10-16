@@ -45,7 +45,7 @@ Un banco de preguntas donde los docentes **escriben, revisan, reutilizan y anali
 
 <div align="center">
 
-**📄 Prueba en papel** → **🤖 Importación** → **✍️ Redacción guiada** → **🔎 Revisión** → **✅ Aprobación** → **🖨️ Formas A y B** → **⚡ Corrección automática** → **📊 Análisis**
+**📄 Prueba en papel** → **🤖 Importación** → **✍️ Redacción guiada** → **🔎 Revisión** → **✅ Aprobación** → **🖨️ Papel o 💻 Moodle** → **⚡ Corrección automática** → **📊 Análisis**
 
 </div>
 
@@ -82,6 +82,7 @@ Un banco de preguntas donde los docentes **escriben, revisan, reutilizan y anali
 |---|---|
 | 📐 **Tabla de especificaciones** | Pesos por resultado de aprendizaje que suman 100 %, solo preguntas aprobadas, semáforo de cobertura en vivo y tiempo estimado. |
 | 🔀 **Formas A y B** | Preguntas y alternativas barajadas con semilla (reproducible), tabla de conversión a nota 1,0–7,0, pauta separada, impresión o PDF y exportación a **Moodle XML**. |
+| 🔄 **Integración con Moodle** | Ida y vuelta: la prueba se **envía a Moodle** (XML), los estudiantes la rinden en línea con **nota al instante**, y el **informe de respuestas vuelve al banco sin nombres ni correos**. Cada respuesta se calza con su pregunta aunque Moodle baraje el orden, y se actualiza el análisis. Guía paso a paso: [`GUIA-MOODLE.md`](GUIA-MOODLE.md). |
 | ⚡ **Corrección de hojas de respuesta** | Hoja imprimible para lector óptico. Se sube el archivo de marcas y el sistema **corrige en segundos**: notas, hojas a revisar a mano (doble marca, en blanco) y descarga de resultados. |
 | 📊 **Análisis de ítems** | Dificultad (p), discriminación (D, 27 %), punto biserial corregida, alertas **PRIORITARIAS** y distribución de alternativas por grupo alto y bajo. Se actualiza con las hojas corregidas. |
 
@@ -89,7 +90,7 @@ Un banco de preguntas donde los docentes **escriben, revisan, reutilizan y anali
 
 | Rol | Qué hace |
 |---|---|
-| 💻 **Docente** | Escribe preguntas, importa pruebas antiguas, arma pruebas y corrige hojas. |
+| 💻 **Docente** | Escribe preguntas, importa pruebas antiguas, arma pruebas, las aplica en papel o en Moodle y revisa los resultados. |
 | 🔎 **Revisor/a** | Revisa, aprueba o devuelve; consulta a un experto cuando lo necesita. |
 | 📚 **Área Curricular** | Cuida la calidad: programas, reglas, revisión en todas las carreras y archivo. |
 | 🎓 **Jefatura de carrera** | Panel de su carrera y atención de consultas a experto. |
@@ -98,7 +99,7 @@ Un banco de preguntas donde los docentes **escriben, revisan, reutilizan y anali
 
 El flujo de aprobación está pensado para ser **configurable por la institución**: una carrera pequeña puede usar solo docente → revisor → aprobada.
 
-**No incluye**, por ser un demo: inicio de sesión institucional real (SSO), integración con sistemas académicos reales, un proveedor de IA real ni un lector óptico real. La IA, el reconocimiento de texto de archivos y las hojas escaneadas están **simulados** con ejemplos.
+**No incluye**, por ser un demo: inicio de sesión institucional real (SSO), integración con sistemas académicos reales, un proveedor de IA real, un lector óptico real ni una conexión directa a un Moodle (los archivos se intercambian; ver la guía). La IA, el reconocimiento de texto de archivos y las hojas escaneadas están **simulados** con ejemplos.
 
 ---
 
@@ -119,6 +120,13 @@ El flujo de aprobación está pensado para ser **configurable por la institució
   <a href="docs/capturas/19-corregir-hojas.png"><img src="docs/capturas/galeria/19-corregir-hojas.png" width="47%" alt="Corrección de 40 hojas de respuesta"></a>
 </p>
 <sub>Importar una prueba antigua · Corregir 40 hojas en segundos</sub>
+
+<p align="center">
+  <a href="docs/capturas/20-resultados-moodle.png"><img src="docs/capturas/galeria/20-resultados-moodle.png" width="47%" alt="Resultados de Moodle"></a>
+  &nbsp;
+  <a href="docs/capturas/09c-hoja-respuestas.png"><img src="docs/capturas/galeria/09c-hoja-respuestas.png" width="47%" alt="Hoja de respuestas para lector óptico"></a>
+</p>
+<sub>Resultados que vuelven de Moodle · Hoja de respuestas para lector óptico</sub>
 
 <p align="center">
   <a href="docs/capturas/04c-experta-responde.png"><img src="docs/capturas/galeria/04c-experta-responde.png" width="47%" alt="Consulta a par experto"></a>
@@ -155,7 +163,7 @@ Abra **[el demo](https://manecist.github.io/banco-evaluaciones-demo/)** y elija 
 2. **Camila Ruiz (revisora):** abra la pregunta, tómela para revisión y use la «Ayuda para revisar». Pruebe «Consultar a un experto».
 3. **Luis Pérez (jefatura):** en su panel, asigne la consulta a **Rosa Tapia**, que responde. Después Camila aprueba.
 4. **Paula:** «Importar prueba antigua» con el ejemplo escaneado. En «Instrumentos», arme una prueba y vea las formas A y B, la pauta y la hoja de respuestas.
-5. **Prueba 1:** «Corregir hojas de respuesta» → «Cargar 40 hojas escaneadas de ejemplo» → «Guardar notas» → «Análisis de ítems».
+5. **Prueba 1:** «Corregir hojas de respuesta» → «Cargar 40 hojas escaneadas de ejemplo» → «Guardar notas». Luego «Importar resultados de Moodle» → «Usar un informe de ejemplo» → «Guardar resultados» → «Análisis de ítems».
 6. **Marcela Díaz (UTA)** y **Administración:** «Configuración». **Andrea Muñoz (Área Curricular):** «Auditoría».
 
 Al recargar la página, todo vuelve a su estado inicial.
@@ -203,7 +211,7 @@ npm test                  # Vitest: núcleo y API
 npm run build:demo        # demo estático en docs/
 ```
 
-**36 pruebas automatizadas** sobre PostgreSQL real (PGlite). Cubren, entre otras cosas, la búsqueda tolerante, la inmutabilidad de versiones, las reglas de visación, la consulta a experto, los permisos por rol, la importación de pruebas antiguas, la corrección de hojas, el análisis de ítems y la API. **GitHub Actions** ejecuta en cada cambio la revisión de tipos, las pruebas, el build del demo y el build de la imagen Docker.
+**39 pruebas automatizadas** sobre PostgreSQL real (PGlite). Cubren, entre otras cosas, la búsqueda tolerante, la inmutabilidad de versiones, las reglas de visación, la consulta a experto, los permisos por rol, la importación de pruebas antiguas, la corrección de hojas, la vuelta de resultados desde Moodle, el análisis de ítems y la API. **GitHub Actions** ejecuta en cada cambio la revisión de tipos, las pruebas, el build del demo y el build de la imagen Docker.
 
 ---
 

@@ -62,6 +62,7 @@ export interface Api {
   consultations(): Promise<Consultation[]>;
   importLegacy(req: { moduleId: number; outcomeId: number; source: string; questions: { stem: string; bloomLevel: number; payload: unknown }[] }): Promise<ItemDetail[]>;
   saveSheets(instrumentId: number, csv: string): Promise<{ saved: number; skipped: number }>;
+  saveMoodleResults(instrumentId: number, csv: string): Promise<{ saved: number; skipped: number; mapped: number; unmatched: number }>;
   requestConsultation(itemId: number, reason: string): Promise<ItemDetail>;
   assignConsultation(id: number, assigneeId: number): Promise<Consultation>;
   resolveConsultation(id: number, d: { verdict: string; opinion: string }): Promise<Consultation>;
@@ -122,6 +123,7 @@ export function createHttpApi(): Api {
     consultations: () => call("GET", "/api/consultations"),
     importLegacy: (r) => call("POST", "/api/import/legacy", r),
     saveSheets: (id, csv) => call("POST", `/api/instruments/${id}/sheets`, { csv }),
+    saveMoodleResults: (id, csv) => call("POST", `/api/instruments/${id}/moodle-results`, { csv }),
     requestConsultation: (id, reason) => call("POST", `/api/items/${id}/consultation`, { reason }),
     assignConsultation: (id, assigneeId) => call("POST", `/api/consultations/${id}/assign`, { assigneeId }),
     resolveConsultation: (id, d) => call("POST", `/api/consultations/${id}/resolve`, d),
@@ -182,6 +184,7 @@ export async function createLocalApi(onProgress?: (msg: string) => void): Promis
     consultations: () => wrap(() => core.listConsultations(db, u())),
     importLegacy: (r) => wrap(() => core.importLegacyItems(db, u(), r)),
     saveSheets: (id, csv) => wrap(() => core.saveSheetResults(db, u(), id, csv)),
+    saveMoodleResults: (id, csv) => wrap(() => core.saveMoodleResults(db, u(), id, csv)),
     requestConsultation: (id, reason) => wrap(() => core.requestConsultation(db, u(), id, { reason })),
     assignConsultation: (id, assigneeId) => wrap(() => core.assignConsultation(db, u(), id, { assigneeId })),
     resolveConsultation: (id, d) => wrap(() => core.resolveConsultation(db, u(), id, d)),

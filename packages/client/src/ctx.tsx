@@ -25,7 +25,8 @@ export type View =
   | { name: "career" }
   | { name: "settings" }
   | { name: "import" }
-  | { name: "sheets"; id: number };
+  | { name: "sheets"; id: number }
+  | { name: "moodle"; id: number };
 
 export const AppCtx = createContext<Ctx | null>(null);
 export const useApp = () => useContext(AppCtx)!;

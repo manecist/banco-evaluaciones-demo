@@ -48,6 +48,7 @@ export const openApiDocument = {
     "/api/consultations/{id}/resolve": { post: { summary: "Jefatura o experto asignado responde", responses: { "200": { description: "Consulta resuelta" } } } },
     "/api/import/legacy": { post: { summary: "Importar preguntas de una prueba antigua como borradores", responses: { "200": { description: "Ítems creados" } } } },
     "/api/instruments/{id}/sheets": { post: { summary: "Corregir y guardar hojas de respuesta (archivo del lector óptico)", responses: { "200": { description: "Notas y resumen" } } } },
+    "/api/instruments/{id}/moodle-results": { post: { summary: "Importar el informe de respuestas de Moodle (sin datos personales) y actualizar el análisis", responses: { "200": { description: "Resultados guardados" }, "422": { description: "No se reconoció la prueba" } } } },
     "/api/audit": { get: { summary: "Bitácora de auditoría", responses: { "200": { description: "Registros" } } } },
   },
 } as const;

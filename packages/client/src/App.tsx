@@ -11,6 +11,7 @@ import { AboutView, AiView, AuditView } from "./views/Other";
 import { CareerView, SettingsView } from "./views/Roles";
 import { ImportView } from "./views/Import";
 import { SheetsView } from "./views/Sheets";
+import { MoodleView } from "./views/Moodle";
 
 const DEMO = import.meta.env.MODE === "demo";
 let apiPromise: Promise<Api> | null = null;
@@ -79,7 +80,7 @@ export function App() {
   const nav: { label: string; v: View; show: boolean; active: boolean }[] = [
     { label: "Panel de carrera", v: { name: "career" }, show: ctx.can("career:dashboard"), active: view.name === "career" },
     { label: "Banco de ítems", v: { name: "items" }, show: true, active: ["items", "item", "edit", "import"].includes(view.name) },
-    { label: "Instrumentos", v: { name: "instruments" }, show: true, active: ["instruments", "instrument", "new-instrument", "analysis", "sheets"].includes(view.name) },
+    { label: "Instrumentos", v: { name: "instruments" }, show: true, active: ["instruments", "instrument", "new-instrument", "analysis", "sheets", "moodle"].includes(view.name) },
     { label: "Asistente IA", v: { name: "ai" }, show: ctx.can("ai:use"), active: view.name === "ai" },
     { label: "Configuración", v: { name: "settings" }, show: ctx.can("settings:pedagogic") || ctx.can("settings:technical"), active: view.name === "settings" },
     { label: "Auditoría", v: { name: "audit" }, show: ctx.can("audit:read"), active: view.name === "audit" },
@@ -116,6 +117,7 @@ export function App() {
           {view.name === "settings" && <SettingsView />}
           {view.name === "import" && <ImportView />}
           {view.name === "sheets" && <SheetsView id={view.id} />}
+          {view.name === "moodle" && <MoodleView id={view.id} />}
         </main>
         {toastMsg && <div className={`toast ${toastMsg.kind}`} role="status">{toastMsg.msg}</div>}
       </div>

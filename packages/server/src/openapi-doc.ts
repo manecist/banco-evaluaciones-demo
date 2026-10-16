@@ -36,6 +36,12 @@ export const openApiDocument = {
     "/api/instruments/{id}/analysis": { get: { summary: "Análisis de ítems (p, D, punto biserial corregida)", responses: { "200": { description: "Estadísticos y alertas" } } } },
     "/api/export/moodle": { get: { summary: "Exportar a XML de Moodle", responses: { "200": { description: "XML", content: { "application/xml": {} } } } } },
     "/api/ai/draft": { post: { summary: "Asistente de IA: borradores validados por esquema", responses: { "200": { description: "Borradores creados" } } } },
+    "/api/ai/review": { post: { summary: "Segunda opinión de IA sobre un ítem (comenta la clave; no la cambia)", responses: { "200": { description: "Observaciones validadas por esquema" } } } },
+    "/api/settings": {
+      get: { summary: "Configuración vigente", responses: { "200": { description: "Ajustes" } } },
+      put: { summary: "Cambiar ajustes (pedagógicos: UTA; técnicos: Administración)", responses: { "200": { description: "Ajustes actualizados" }, "403": { description: "Sin permiso para ese ajuste" }, "422": { description: "Valor fuera de rango" } } },
+    },
+    "/api/career-summary": { get: { summary: "Panel de la carrera para la jefatura", responses: { "200": { description: "Resumen" } } } },
     "/api/audit": { get: { summary: "Bitácora de auditoría", responses: { "200": { description: "Registros" } } } },
   },
 } as const;

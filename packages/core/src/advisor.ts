@@ -64,7 +64,11 @@ export function adviseItem(input: { stem: string; payload: ItemPayload; bloomLev
     });
   }
   if (!bloom && stem.length >= 25) {
-    out.push({ rule: "sin_verbo", severity: "info", message: "No se reconoce un verbo de desempeño; el nivel taxonómico no se puede comprobar." });
+    out.push({
+      rule: "sin_verbo",
+      severity: "info",
+      message: "Conviene empezar con un verbo que diga qué debe hacer el estudiante (por ejemplo: Identifique, Calcule, Explique). Así se puede comprobar el nivel de Bloom.",
+    });
   }
 
   for (const a of ABSOLUTES) {
@@ -91,12 +95,16 @@ export function adviseItem(input: { stem: string; payload: ItemPayload; bloomLev
     if (correctIdx >= 0 && lens[correctIdx] === max && max > avgOthers * 1.6 && max > 20) {
       out.push({ rule: "clave_mas_larga", severity: "aviso", message: "La alternativa correcta es notoriamente más larga que las demás: puede delatar la respuesta." });
     }
-    const texts = p.alternatives.map((a) => normalize(a.text.trim()));
+    const texts = p.alternatives.map((a) => normalize(a.text.trim())).filter(Boolean);
+    const empty = p.alternatives.length - texts.length;
+    if (empty > 0) {
+      out.push({ rule: "alternativas_vacias", severity: "aviso", message: `Faltan ${empty === 1 ? "1 alternativa" : `${empty} alternativas`} por escribir.` });
+    }
     if (new Set(texts).size !== texts.length) {
-      out.push({ rule: "alternativas_repetidas", severity: "importante", message: "Hay alternativas repetidas." });
+      out.push({ rule: "alternativas_repetidas", severity: "importante", message: "Hay alternativas repetidas: cada opción debe ser distinta." });
     }
     if (p.alternatives.some((a) => !a.correct && !a.feedback.trim())) {
-      out.push({ rule: "sin_retroalimentacion", severity: "info", message: "Agregue retroalimentación a los distractores: ayuda al estudiante a entender su error." });
+      out.push({ rule: "sin_retroalimentacion", severity: "info", message: "Opcional: agregue retroalimentación a las alternativas incorrectas; ayuda al estudiante a entender su error." });
     }
   }
   if (p.type === "pareados" && p.distractors.length === 0) {

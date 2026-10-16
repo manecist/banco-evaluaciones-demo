@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Catalog, User } from "@banco/core";
 import { createHttpApi, createLocalApi, type Api } from "./api";
-import { AppCtx, makeCan, ROLE_LABEL, type Ctx, type View } from "./ctx";
+import { AppCtx, makeCan, ROLE_DESC, ROLE_LABEL, type Ctx, type View } from "./ctx";
 import { ItemsView } from "./views/Items";
 import { ItemView } from "./views/Item";
 import { EditorView } from "./views/Editor";
 import { InstrumentsView, InstrumentView, NewInstrumentView } from "./views/Instruments";
 import { AnalysisView } from "./views/Analysis";
 import { AboutView, AiView, AuditView } from "./views/Other";
+import { CareerView, SettingsView } from "./views/Roles";
 
 const DEMO = import.meta.env.MODE === "demo";
 let apiPromise: Promise<Api> | null = null;
@@ -40,7 +41,7 @@ export function App() {
     const u = await api.login(id);
     setCatalog(await api.catalog());
     setUser(u);
-    setView({ name: "items" });
+    setView(u.role === "jefatura" ? { name: "career" } : u.role === "uta" || u.role === "admin" ? { name: "settings" } : { name: "items" });
   };
 
   if (bootError) return <div className="boot"><p className="error">No se pudo iniciar: {bootError}</p></div>;
@@ -55,11 +56,12 @@ export function App() {
             Inicio de sesión institucional <b>simulado</b>. En un sistema real los roles vienen del proveedor de identidad
             de la institución; aquí puede elegir una persona ficticia para probar cada rol.
           </p>
+          <p className="start-tip"><b>¿Por dónde empezar?</b> Entre como <b>Paula Soto (docente)</b> para crear una pregunta. Después, con «Cambiar rol», entre como <b>Camila Ruiz (revisora)</b> para aprobarla.</p>
           <div className="user-grid">
             {users.map((u) => (
               <button key={u.id} className="user-btn" onClick={() => login(u.id)}>
                 <span className="avatar">{u.name[0]}</span>
-                <span><b>{u.name.replace(/\s*\(.*\)/, "")}</b><small>{ROLE_LABEL[u.role]}</small></span>
+                <span><b>{u.name.replace(/\s*\(.*\)/, "")}</b><small>{ROLE_LABEL[u.role]}</small><small className="role-desc">{ROLE_DESC[u.role]}</small></span>
               </button>
             ))}
           </div>
@@ -73,9 +75,11 @@ export function App() {
 
   const ctx: Ctx = { api, user, catalog, can: makeCan(user), go: setView, toast };
   const nav: { label: string; v: View; show: boolean; active: boolean }[] = [
+    { label: "Panel de carrera", v: { name: "career" }, show: ctx.can("career:dashboard"), active: view.name === "career" },
     { label: "Banco de ítems", v: { name: "items" }, show: true, active: ["items", "item", "edit"].includes(view.name) },
     { label: "Instrumentos", v: { name: "instruments" }, show: true, active: ["instruments", "instrument", "new-instrument", "analysis"].includes(view.name) },
     { label: "Asistente IA", v: { name: "ai" }, show: ctx.can("ai:use"), active: view.name === "ai" },
+    { label: "Configuración", v: { name: "settings" }, show: ctx.can("settings:pedagogic") || ctx.can("settings:technical"), active: view.name === "settings" },
     { label: "Auditoría", v: { name: "audit" }, show: ctx.can("audit:read"), active: view.name === "audit" },
     { label: "Acerca del demo", v: { name: "about" }, show: true, active: view.name === "about" },
   ];
@@ -106,6 +110,8 @@ export function App() {
           {view.name === "ai" && <AiView />}
           {view.name === "audit" && <AuditView />}
           {view.name === "about" && <AboutView />}
+          {view.name === "career" && <CareerView />}
+          {view.name === "settings" && <SettingsView />}
         </main>
         {toastMsg && <div className={`toast ${toastMsg.kind}`} role="status">{toastMsg.msg}</div>}
       </div>

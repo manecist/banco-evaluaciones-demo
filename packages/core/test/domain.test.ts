@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adviseItem, analyzeItems, coverage, detectBloomLevel, redactPII, scoreToGrade, seededShuffle, toMoodleXml, type ItemVersion } from "../src";
+import { adviseItem, simulatedReviewer, reviewItem, analyzeItems, coverage, detectBloomLevel, redactPII, scoreToGrade, seededShuffle, toMoodleXml, type ItemVersion } from "../src";
 
 describe("conversión a nota (exigencia 60 %)", () => {
   it("respeta los extremos y el umbral de aprobación", () => {
@@ -99,5 +99,33 @@ describe("exportación a Moodle XML", () => {
     expect(xml).toContain("<idnumber>banco-9</idnumber>");
     expect(xml).toContain("&lt;");
     expect(xml).toContain('fraction="100"');
+  });
+});
+
+describe("segunda opinión de IA", () => {
+  it("valida por esquema, elimina datos personales y detecta alternativas solapadas", async () => {
+    const r = await reviewItem(simulatedReviewer, {
+      stem: "Identifique a quién informar ante una caída de presión (consultas: ana@correo.cl)",
+      alternatives: [
+        { text: "A la enfermera a cargo", correct: true },
+        { text: "A la enfermera", correct: false },
+        { text: "A nadie", correct: false },
+      ],
+    });
+    expect(r.piiRemoved).toBe(1);
+    expect(r.keyAssessment).toBe("dudosa");
+    expect(r.observations.join(" ")).toMatch(/dos respuestas válidas/);
+    expect(r.simulated).toBe(true);
+  });
+  it("no confunde rangos con valores numéricos sueltos", async () => {
+    const r = await reviewItem(simulatedReviewer, {
+      stem: "Identifique el rango normal de frecuencia cardiaca en un adulto en reposo.",
+      alternatives: [
+        { text: "60 a 100 latidos por minuto", correct: true },
+        { text: "40 a 60 latidos por minuto", correct: false },
+        { text: "12 a 20 latidos por minuto", correct: false },
+      ],
+    });
+    expect(r.keyAssessment).toBe("coherente");
   });
 });

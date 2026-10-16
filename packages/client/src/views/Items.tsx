@@ -29,8 +29,21 @@ export function ItemsView() {
             español: tolera tildes y errores de tipeo.
           </p>
         </div>
-        {can("item:create") && <button className="primary" onClick={() => go({ name: "edit" })}>+ Nuevo ítem</button>}
+        {can("item:create") && <button className="primary" onClick={() => go({ name: "edit" })}>+ Nueva pregunta</button>}
       </div>
+
+      {can("item:create") && (
+        <div className="card guide">
+          <h2>¿Primera vez? Así se usa</h2>
+          <ol className="guide-steps">
+            <li>Presione <b>«+ Nueva pregunta»</b> y siga los 5 pasos. Puede cargar un ejemplo con un clic.</li>
+            <li>Abra la pregunta guardada y presione <b>«Enviar a revisión»</b>.</li>
+            <li>Un revisor la aprueba (<b>visa</b>). En el demo: «Cambiar rol» → Camila Ruiz.</li>
+            <li>Con preguntas visadas, arme una prueba en <b>«Instrumentos»</b>.</li>
+          </ol>
+          <p className="hint">Abajo está el banco: haga clic en cualquier pregunta para verla completa.</p>
+        </div>
+      )}
 
       <div className="filters">
         <input className="search" placeholder="Buscar… (pruebe «presion» o «higene de manos»)" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar ítems" />

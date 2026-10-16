@@ -17,15 +17,18 @@ export type Action =
   | "analysis:read"
   | "audit:read"
   | "ai:use"
-  | "settings:edit";
+  | "career:dashboard"
+  | "settings:pedagogic"
+  | "settings:technical"
+  | "users:read";
 
 const MATRIX: Record<Role, readonly Action[]> = {
   docente: ["item:read", "item:create", "item:edit_own", "item:submit", "instrument:create", "export:moodle", "analysis:read", "ai:use"],
-  jefatura: ["item:read", "analysis:read", "audit:read", "export:moodle"],
+  jefatura: ["item:read", "analysis:read", "audit:read", "export:moodle", "career:dashboard"],
   revisor: ["item:read", "item:review", "item:approve", "analysis:read", "audit:read"],
   area_curricular: ["item:read", "item:create", "item:edit_own", "item:submit", "item:review", "item:approve", "item:archive", "instrument:create", "export:moodle", "analysis:read", "audit:read", "ai:use"],
-  uta: ["item:read", "export:moodle", "analysis:read", "audit:read", "settings:edit"],
-  admin: ["item:read", "audit:read", "settings:edit"],
+  uta: ["item:read", "export:moodle", "analysis:read", "audit:read", "settings:pedagogic"],
+  admin: ["item:read", "audit:read", "settings:technical", "users:read"],
 };
 
 export function can(user: Pick<User, "role">, action: Action): boolean {

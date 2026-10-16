@@ -1,9 +1,11 @@
-import { generateItems, simulatedProvider, type AiRequest } from "./ai";
+import { z } from "zod";
+import { generateItems, reviewItem, simulatedProvider, simulatedReviewer, type AiRequest, type AiReviewRequest } from "./ai";
 import { analyzeItems, type AnswerRow } from "./analysis";
 import { LETTERS } from "./grading";
 import { toMoodleXml } from "./moodle";
 import {
   assertCan,
+  can,
   checkTransition,
   ConflictError,
   ForbiddenError,
@@ -118,6 +120,77 @@ export async function getUser(db: Db, id: number): Promise<User> {
 export async function getSettings(db: Db): Promise<Record<string, unknown>> {
   const r = await db.query<Row>(`SELECT key, value FROM setting`);
   return Object.fromEntries(r.rows.map((x) => [x.key, typeof x.value === "string" ? JSON.parse(x.value) : x.value]));
+}
+
+/** Ajustes que define la UTA (pedagógicos) y los que define Administración (técnicos). */
+export const PEDAGOGIC_SETTINGS = ["default_exigency", "coverage_tolerance", "min_responses"] as const;
+export const TECHNICAL_SETTINGS = ["ai_enabled", "ai_daily_limit"] as const;
+
+export const settingsPatchSchema = z
+  .object({
+    default_exigency: z.number().min(0.4).max(0.8),
+    coverage_tolerance: z.number().int().min(1).max(20),
+    min_responses: z.number().int().min(5).max(500),
+    ai_enabled: z.boolean(),
+    ai_daily_limit: z.number().int().min(0).max(200),
+  })
+  .partial()
+  .strict();
+
+export async function updateSettings(db: Db, user: User, raw: unknown): Promise<Record<string, unknown>> {
+  const patch = parseOrThrow(settingsPatchSchema, raw);
+  for (const key of Object.keys(patch)) {
+    const technical = (TECHNICAL_SETTINGS as readonly string[]).includes(key);
+    assertCan(user, technical ? "settings:technical" : "settings:pedagogic");
+  }
+  await db.tx(async (tx) => {
+    for (const [key, value] of Object.entries(patch)) {
+      await tx.query(`UPDATE setting SET value = $2::jsonb WHERE key = $1`, [key, JSON.stringify(value)]);
+    }
+    await audit(tx, user.id, "configuracion", "setting", null, patch);
+  });
+  return getSettings(db);
+}
+
+/** Resumen de una carrera para la jefatura: estado del banco, pendientes y alertas. */
+export async function careerSummary(db: Db, user: User) {
+  assertCan(user, "career:dashboard");
+  if (!user.careerId) throw new ValidationError("La jefatura no tiene una carrera asignada");
+  const byStatus = await db.query<Row>(
+    `SELECT i.status, count(*)::int AS n FROM item i
+       JOIN item_version v ON v.id = i.current_version JOIN module m ON m.id = v.module_id
+      WHERE m.career_id = $1 AND NOT i.archived GROUP BY i.status`,
+    [user.careerId],
+  );
+  const byModule = await db.query<Row>(
+    `SELECT m.id, m.code, m.name,
+            count(*) FILTER (WHERE i.status = 'visado')::int AS visados,
+            count(*) FILTER (WHERE i.status IN ('recepcionado','en_revision'))::int AS en_revision,
+            count(*) FILTER (WHERE i.status IN ('borrador','devuelto'))::int AS en_redaccion
+       FROM module m
+       LEFT JOIN item_version v ON v.module_id = m.id
+       LEFT JOIN item i ON i.current_version = v.id AND NOT i.archived
+      WHERE m.career_id = $1 GROUP BY m.id ORDER BY m.code`,
+    [user.careerId],
+  );
+  const instruments = (await listInstruments(db, user)).filter((x) => byModule.rows.some((m) => m.id === x.moduleId));
+  const withAnalysis = [];
+  for (const ins of instruments) {
+    const a = await analyzeInstrument(db, user, ins.id);
+    withAnalysis.push({
+      id: ins.id,
+      title: ins.title,
+      students: a.students,
+      priority: a.stats.filter((s) => s.alerts.some((x) => x.startsWith("PRIORITARIO"))).length,
+      alerts: a.stats.filter((s) => s.alerts.length > 0).length,
+    });
+  }
+  return {
+    careerId: user.careerId,
+    byStatus: Object.fromEntries(byStatus.rows.map((r) => [r.status, r.n])) as Record<string, number>,
+    modules: byModule.rows.map((r) => ({ id: r.id, code: r.code, name: r.name, visados: r.visados, enRevision: r.en_revision, enRedaccion: r.en_redaccion })),
+    instruments: withAnalysis,
+  };
 }
 
 /* ===================== Ítems ===================== */
@@ -540,4 +613,15 @@ export async function aiDraftItems(db: Db, user: User, req: AiRequest & { module
     [user.id, simulatedProvider.name, simulatedProvider.model, result.tokensIn, result.tokensOut, result.costClp, result.accepted.length, result.discarded],
   );
   return { created, discarded: result.discarded, piiRemoved: result.piiRemoved, tokensIn: result.tokensIn, tokensOut: result.tokensOut, costClp: result.costClp, model: simulatedProvider.model };
+}
+
+/** Segunda opinión de la IA sobre un ítem en redacción. Solo comenta: no cambia la clave. */
+export async function aiReviewItem(db: Db, user: User, req: AiReviewRequest) {
+  // La usa quien redacta (docente) y también quien revisa, que puede no ser experto en la materia.
+  if (!can(user, "ai:use") && !can(user, "item:review")) assertCan(user, "ai:use");
+  const settings = await getSettings(db);
+  if (settings.ai_enabled === false) throw new ConflictError("El asistente de IA está desactivado por la institución");
+  const r = await reviewItem(simulatedReviewer, req);
+  await audit(db, user.id, "ia_segunda_opinion", "item", null, { modelo: r.model, clave: r.keyAssessment, observaciones: r.observations.length });
+  return r;
 }

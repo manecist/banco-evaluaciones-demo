@@ -348,9 +348,47 @@ main { width: 100%; max-width: 1180px; margin: 0 auto; padding: 1.5rem 1.25rem 3
 /* ---------- Editor ---------- */
 
 .editor { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
-.editor aside { position: sticky; top: 76px; }
+.editor aside { display: grid; gap: 1rem; }
+.editor aside .card { margin: 0; }
 fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 0.9rem 1rem 0.4rem; margin: 0 0 1rem; min-width: 0; }
-legend { font-weight: 700; color: var(--navy); padding: 0 0.4rem; }
+legend { font-weight: 700; color: var(--navy); padding: 0 0.4rem; display: flex; align-items: center; gap: 0.5rem; font-size: 1rem; }
+.step { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--navy); color: #fff; font-size: 0.85rem; flex: none; }
+.help { font-weight: 400; color: var(--ink-2); font-size: 0.8rem; line-height: 1.4; }
+.opt { font-weight: 400; color: var(--ink-2); }
+.row2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 0.75rem; }
+.correct-pick { flex-direction: row; align-items: center; gap: 0.3rem; margin: 0; cursor: pointer; font-weight: 700; color: var(--navy); }
+.correct-pick input { width: 1.2rem; height: 1.2rem; accent-color: var(--ok); }
+.correct-pick span { display: grid; line-height: 1.1; min-width: 1.2rem; }
+.correct-pick small { font-size: 0.66rem; font-weight: 700; color: var(--ok); text-transform: uppercase; letter-spacing: 0.02em; }
+.alt-row.is-correct > input:nth-of-type(1) { border-color: var(--ok); background: var(--ok-bg); }
+.pair-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.45rem; margin-bottom: 0.45rem; }
+.next-step { background: var(--navy-soft); border-radius: 8px; padding: 0.6rem 0.8rem; font-size: 0.9rem; margin: 0.75rem 0 0.4rem; }
+.role-desc { font-weight: 400; color: var(--ink-2); font-size: 0.74rem; line-height: 1.3; margin-top: 0.15rem; }
+.alert-chip { background: var(--err-bg) !important; color: var(--err) !important; font-weight: 700; }
+.readonly input:disabled { background: var(--line-2); color: var(--ink-2); }
+.help.block { display: block; margin: -0.4rem 0 0.75rem; }
+.start-tip { background: var(--navy-soft); border-radius: 8px; padding: 0.6rem 0.8rem; font-size: 0.9rem; }
+.guide { border-top: 4px solid var(--gold); margin-bottom: 1rem; }
+.guide-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.guide-head h2 { margin: 0; }
+.guide-steps { margin: 0.6rem 0 0.2rem; padding-left: 1.3rem; display: grid; gap: 0.25rem; }
+.review-help { margin-top: 1rem; }
+.review-help h3 { font-size: 0.95rem; margin-top: 0.4rem; }
+.review-help ul { padding-left: 1.1rem; font-size: 0.9rem; }
+.section-title { margin-top: 1.5rem; }
+.review-out { margin-top: 0.75rem; border-top: 1px solid var(--line); padding-top: 0.6rem; font-size: 0.9rem; }
+.ai-review .review-out { margin-top: 0.75rem; border-top: 1px solid var(--line); padding-top: 0.6rem; font-size: 0.9rem; }
+.ai-review .review-out p { margin: 0 0 0.5rem; }
+.ai-review .review-out ul { margin: 0 0 0.5rem; padding-left: 1.1rem; }
+.ai-review .suggest { background: var(--navy-soft); border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; }
+.badge.rv-coherente { background: var(--ok-bg); color: var(--ok); }
+.badge.rv-dudosa { background: var(--warn-bg); color: var(--warn); }
+.badge.rv-sin_clave { background: var(--err-bg); color: var(--err); }
+.torpedo summary { cursor: pointer; font-weight: 700; color: var(--navy); font-size: 1.05rem; }
+.torpedo summary:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+.torpedo h3 { font-size: 0.95rem; margin-top: 0.9rem; }
+.torpedo ul, .torpedo ol { padding-left: 1.1rem; font-size: 0.88rem; margin: 0.3rem 0; }
+.table.compact th, .table.compact td { padding: 0.35rem 0.5rem; font-size: 0.82rem; }
 .row3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0 0.75rem; }
 .alts-edit { display: grid; gap: 0.45rem; margin-bottom: 0.75rem; justify-items: start; }
 .alt-row { display: grid; grid-template-columns: auto minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 0.45rem; align-items: center; width: 100%; }
@@ -573,3 +611,4 @@ legend { font-weight: 700; color: var(--navy); padding: 0 0.4rem; }
   .table-wrap { overflow: visible; }
   a { color: inherit; text-decoration: none; }
 }
+section > h2 { margin-top: 1.4rem; }

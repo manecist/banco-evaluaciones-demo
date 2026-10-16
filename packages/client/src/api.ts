@@ -23,6 +23,23 @@ export interface AiResult {
   model: string;
 }
 
+export interface AiReviewResult {
+  keyAssessment: "coherente" | "dudosa" | "sin_clave";
+  comment: string;
+  observations: string[];
+  suggestedStem?: string;
+  piiRemoved: number;
+  model: string;
+  simulated: boolean;
+}
+
+export interface CareerSummary {
+  careerId: number;
+  byStatus: Record<string, number>;
+  modules: { id: number; code: string; name: string; visados: number; enRevision: number; enRedaccion: number }[];
+  instruments: { id: number; title: string; students: number; priority: number; alerts: number }[];
+}
+
 export interface Analysis {
   instrument: InstrumentDetail;
   students: number;
@@ -37,6 +54,8 @@ export interface Api {
   login(userId: number): Promise<User>;
   catalog(): Promise<Catalog>;
   settings(): Promise<Record<string, unknown>>;
+  updateSettings(patch: Record<string, unknown>): Promise<Record<string, unknown>>;
+  careerSummary(): Promise<CareerSummary>;
   searchItems(f: ItemSearch): Promise<ItemSummary[]>;
   getItem(id: number): Promise<ItemDetail>;
   createItem(input: ItemInput): Promise<ItemDetail>;
@@ -51,6 +70,7 @@ export interface Api {
   analysis(id: number): Promise<Analysis>;
   exportMoodle(opts: { instrumentId?: number; itemIds?: number[] }): Promise<string>;
   aiDraft(req: { moduleId: number; outcomeId: number; outcomeText: string; count: number; context: string }): Promise<AiResult>;
+  aiReview(req: { stem: string; alternatives: { text: string; correct: boolean }[] }): Promise<AiReviewResult>;
   audit(): Promise<AuditEntry[]>;
 }
 
@@ -88,6 +108,8 @@ export function createHttpApi(): Api {
     },
     catalog: () => call("GET", "/api/catalog"),
     settings: () => call("GET", "/api/settings"),
+    updateSettings: (p) => call("PUT", "/api/settings", p),
+    careerSummary: () => call("GET", "/api/career-summary"),
     searchItems: (f) => call("GET", `/api/items?${qs(f)}`),
     getItem: (id) => call("GET", `/api/items/${id}`),
     createItem: (i) => call("POST", "/api/items", i),
@@ -102,6 +124,7 @@ export function createHttpApi(): Api {
     analysis: (id) => call("GET", `/api/instruments/${id}/analysis`),
     exportMoodle: (o) => call("GET", `/api/export/moodle?${qs({ instrumentId: o.instrumentId, itemIds: o.itemIds?.join(",") })}`, undefined, true),
     aiDraft: (r) => call("POST", "/api/ai/draft", r),
+    aiReview: (r) => call("POST", "/api/ai/review", r),
     audit: () => call("GET", "/api/audit"),
   };
 }
@@ -139,6 +162,8 @@ export async function createLocalApi(onProgress?: (msg: string) => void): Promis
     login: async (id) => (user = await core.getUser(db, id)),
     catalog: () => core.getCatalog(db),
     settings: () => core.getSettings(db),
+    updateSettings: (p) => wrap(() => core.updateSettings(db, u(), p)),
+    careerSummary: () => wrap(() => core.careerSummary(db, u())),
     searchItems: (f) => wrap(() => core.searchItems(db, u(), f)),
     getItem: (id) => wrap(() => core.getItem(db, u(), id)),
     createItem: (i) => wrap(() => core.createItem(db, u(), i)),
@@ -153,6 +178,7 @@ export async function createLocalApi(onProgress?: (msg: string) => void): Promis
     analysis: (id) => wrap(() => core.analyzeInstrument(db, u(), id)),
     exportMoodle: (o) => wrap(async () => (await core.exportMoodle(db, u(), o)).xml),
     aiDraft: (r) => wrap(() => core.aiDraftItems(db, u(), r)),
+    aiReview: (r) => wrap(() => core.aiReviewItem(db, u(), r)),
     audit: () => wrap(() => core.listAudit(db, u())),
   };
 }

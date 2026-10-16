@@ -75,6 +75,8 @@ export function createApp({ db, jwtSecret, allowDemoLogin, staticDir }: AppOptio
   app.get("/api/me", h(async (req) => me(req)));
   app.get("/api/catalog", h(async () => core.getCatalog(db)));
   app.get("/api/settings", h(async () => core.getSettings(db)));
+  app.put("/api/settings", h(async (req) => core.updateSettings(db, me(req), req.body)));
+  app.get("/api/career-summary", h(async (req) => core.careerSummary(db, me(req))));
 
   app.get("/api/items", h(async (req) => core.searchItems(db, me(req), req.query)));
   app.post("/api/items", h(async (req, res) => {
@@ -120,6 +122,14 @@ export function createApp({ db, jwtSecret, allowDemoLogin, staticDir }: AppOptio
       count: z.number().int().min(1).max(5), context: z.string().max(500),
     }).parse(req.body);
     return core.aiDraftItems(db, me(req), b);
+  }));
+
+  app.post("/api/ai/review", h(async (req) => {
+    const b = z.object({
+      stem: z.string().max(4000),
+      alternatives: z.array(z.object({ text: z.string().max(1000), correct: z.boolean() })).min(2).max(6),
+    }).parse(req.body);
+    return core.aiReviewItem(db, me(req), b);
   }));
 
   app.get("/api/audit", h(async (req) => core.listAudit(db, me(req))));

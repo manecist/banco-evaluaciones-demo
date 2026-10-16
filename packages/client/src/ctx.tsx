@@ -21,7 +21,9 @@ export type View =
   | { name: "analysis"; id: number }
   | { name: "ai" }
   | { name: "audit" }
-  | { name: "about" };
+  | { name: "about" }
+  | { name: "career" }
+  | { name: "settings" };
 
 export const AppCtx = createContext<Ctx | null>(null);
 export const useApp = () => useContext(AppCtx)!;
@@ -62,6 +64,16 @@ export const ROLE_LABEL: Record<string, string> = {
   area_curricular: "Área Curricular",
   uta: "UTA",
   admin: "Administración",
+};
+
+/** Qué hace cada rol, en una línea y en lenguaje simple. */
+export const ROLE_DESC: Record<string, string> = {
+  docente: "Escribe preguntas y arma pruebas.",
+  revisor: "Revisa las preguntas y las aprueba o devuelve.",
+  area_curricular: "Cuida la calidad: programas, reglas, revisión y archivo.",
+  jefatura: "Supervisa su carrera: preguntas disponibles, pendientes y alertas.",
+  uta: "Asesora en evaluación: define la exigencia y las reglas del análisis.",
+  admin: "Mantiene el sistema: IA, límites de uso y usuarios.",
 };
 
 export function fmtDate(iso: string) {

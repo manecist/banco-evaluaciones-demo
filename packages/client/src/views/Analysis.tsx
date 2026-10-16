@@ -43,41 +43,45 @@ export function AnalysisView({ id }: { id: number }) {
       </div>
       <p className="hint">Respuestas simuladas para el demo (ficticias), como si vinieran del Aula Virtual. Grupos alto y bajo: 27 % superior e inferior según puntaje total.</p>
 
-      <div className="table-wrap">
-        <table className="table analysis">
-          <thead>
-            <tr><th>N.º</th><th>Enunciado</th><th className="num">n</th><th className="num">p</th><th className="num">D</th><th className="num">r pbis</th><th>Alertas</th></tr>
-          </thead>
-          <tbody>
-            {rows.map(({ v, n, s }) => {
-              const prio = s.alerts.some((a) => a.startsWith("PRIORITARIO"));
-              return (
-                <tr key={v.id} className={prio ? "prio" : ""}>
-                  <td>{n}</td>
-                  <td title={v.stem}>{short(v.stem)}</td>
-                  <td className="num">{s.n}</td>
-                  <td className={`num idx-${pClass(s.p)}`}>{fmt(s.p)}</td>
-                  <td className={`num idx-${dClass(s.D)}`}>{fmt(s.D)}</td>
-                  <td className="num">{s.rpbis === null ? "—" : fmt(s.rpbis)}</td>
-                  <td>
-                    {s.alerts.length === 0 ? <span className="ok-text">Sin alertas</span> : (
-                      <ul className="alerts">{s.alerts.map((a, i) => <li key={i} className={a.startsWith("PRIORITARIO") ? "alert-prio" : ""}>{a}</li>)}</ul>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {students === 0 ? (
+        <p className="empty">Esta prueba aún no tiene respuestas registradas. Cuando se aplique y se importen los resultados del Aula Virtual, aquí aparecerán los índices de cada ítem.</p>
+      ) : (<>
+        <div className="table-wrap">
+          <table className="table analysis">
+            <thead>
+              <tr><th>N.º</th><th>Enunciado</th><th className="num">n</th><th className="num">p</th><th className="num">D</th><th className="num">r pbis</th><th>Alertas</th></tr>
+            </thead>
+            <tbody>
+              {rows.map(({ v, n, s }) => {
+                const prio = s.alerts.some((a) => a.startsWith("PRIORITARIO"));
+                return (
+                  <tr key={v.id} className={prio ? "prio" : ""}>
+                    <td>{n}</td>
+                    <td title={v.stem}>{short(v.stem)}</td>
+                    <td className="num">{s.n}</td>
+                    <td className={`num idx-${pClass(s.p)}`}>{fmt(s.p)}</td>
+                    <td className={`num idx-${dClass(s.D)}`}>{fmt(s.D)}</td>
+                    <td className="num">{s.rpbis === null ? "—" : fmt(s.rpbis)}</td>
+                    <td>
+                      {s.alerts.length === 0 ? <span className="ok-text">Sin alertas</span> : (
+                        <ul className="alerts">{s.alerts.map((a, i) => <li key={i} className={a.startsWith("PRIORITARIO") ? "alert-prio" : ""}>{a}</li>)}</ul>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
-      <h2>Distribución de alternativas por grupo</h2>
-      <p className="hint">Porcentaje de cada grupo que eligió cada alternativa (orden original del ítem). La clave está marcada. Un buen distractor lo elige más el grupo bajo que el alto.</p>
-      <div className="dist-grid">
-        {rows.filter((r) => r.v.payload.type === "seleccion_multiple").map(({ v, n, s }) => (
-          <Distribution key={v.id} n={n} v={v} s={s} correct={correctChoice[v.id]} />
-        ))}
-      </div>
+        <h2>Distribución de alternativas por grupo</h2>
+        <p className="hint">Porcentaje de cada grupo que eligió cada alternativa (orden original del ítem). La clave está marcada. Un buen distractor lo elige más el grupo bajo que el alto.</p>
+        <div className="dist-grid">
+          {rows.filter((r) => r.v.payload.type === "seleccion_multiple").map(({ v, n, s }) => (
+            <Distribution key={v.id} n={n} v={v} s={s} correct={correctChoice[v.id]} />
+          ))}
+        </div>
+      </>)}
 
       <div className="card explain">
         <h2>¿Cómo leer estos índices?</h2>
@@ -116,8 +120,8 @@ function Distribution({ n, v, s, correct }: { n: number; v: ItemVersion; s: Item
             <li key={l} className={isKey ? "is-key" : ""}>
               <span className="dist-letter">{l}{isKey && <small>clave</small>}</span>
               <span className="bars">
-                <span className="bar"><span className="fill high" style={{ width: `${hi}%` }} /><span className="bar-val">{hi} %</span></span>
-                <span className="bar"><span className="fill low" style={{ width: `${lo}%` }} /><span className="bar-val">{lo} %</span></span>
+                <span className="bar"><span className="track"><span className="fill high" style={{ width: `${hi}%` }} /></span><span className="bar-val">{hi} %</span></span>
+                <span className="bar"><span className="track"><span className="fill low" style={{ width: `${lo}%` }} /></span><span className="bar-val">{lo} %</span></span>
               </span>
             </li>
           );

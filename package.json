@@ -9,6 +9,7 @@
     "test": "vitest run",
     "dev:server": "npm run dev -w @banco/server",
     "dev:client": "npm run dev -w @banco/client",
+    "dev:demo": "npm run dev -w @banco/client -- --mode demo",
     "build:demo": "npm run build:demo -w @banco/client",
     "openapi": "npm run openapi -w @banco/server"
   },

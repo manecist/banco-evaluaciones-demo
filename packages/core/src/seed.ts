@@ -193,44 +193,62 @@ export async function seed(db: Db): Promise<void> {
   })));
 }
 
+export interface SimItem { versionId: number; points: number; correct: number; nAlts: number }
+
 /**
- * Simula 64 primeros intentos con un modelo logístico simple (habilidad vs.
- * dificultad). A propósito incluye un ítem con discriminación negativa y un
- * distractor atractivo para el grupo alto, para que el análisis muestre alertas.
+ * Perfil de cada pregunta de la Prueba 1 en la simulación (mismo orden de la prueba).
+ * Está pensado para que el análisis muestre de todo, con semilla fija:
+ * 4 sanas, 2 prioritarias de distinto tipo y 3 alertas menores distintas.
  */
-async function simulateResponses(db: Db, instrumentId: number, items: { versionId: number; points: number; correct: number; nAlts: number }[]) {
-  const rnd = mulberry32(42);
-  const difficulty = [-1.6, -0.6, 0.4, 0.2, 0.0, -0.4, -2.6, 0.9, -0.8];
-  for (let s = 1; s <= 64; s++) {
-    const ability = (rnd() + rnd() + rnd() - 1.5) * 2.2;
-    const a = await db.query<{ id: number }>(`INSERT INTO attempt (instrument_id, student_code) VALUES ($1, $2) RETURNING id`, [
-      instrumentId,
-      `EST-${String(s).padStart(3, "0")}`,
-    ]);
-    const attemptId = a.rows[0]!.id;
-    for (let k = 0; k < items.length; k++) {
-      const it = items[k]!;
-      const b = difficulty[k] ?? 0;
-      // Ítem 5 (índice 4): mal redactado → lo aciertan más quienes tienen menos habilidad.
-      const theta = k === 4 ? -ability : ability;
-      const pCorrect = 1 / (1 + Math.exp(-(1.4 * (theta - b))));
-      const ok = rnd() < pCorrect;
-      let choice: string | null = null;
-      if (it.correct >= 0) {
-        if (ok) choice = LETTERS[it.correct]!;
-        else {
-          const wrong = [...Array(it.nAlts).keys()].filter((i) => i !== it.correct);
-          // Ítem 8 (índice 7): el distractor B atrae a estudiantes de habilidad alta.
-          const pick = k === 7 && ability > 0.3 ? 1 : wrong[Math.floor(rnd() * wrong.length)]!;
-          choice = LETTERS[pick]!;
-        }
+const PROFILE: { a: number; b: number; flip?: boolean; trap?: number; unused?: number; note: string }[] = [
+  { a: 1.7, b: -0.1, note: "sana" },
+  { a: 1.8, b: 0.5, note: "sana" },
+  { a: 1.6, b: 0.8, note: "sana" },
+  { a: 1.7, b: 0.2, note: "sana" },
+  { a: 1.0, b: -1.2, flip: true, note: "PRIORITARIA: discriminación negativa (enunciado confuso)" },
+  { a: 1.5, b: 0.0, unused: 3, note: "menor: distractor que nadie elige" },
+  { a: 1.4, b: -2.2, note: "menor: muy fácil" },
+  { a: 1.2, b: -0.8, flip: true, trap: 1, note: "PRIORITARIA: clave probablemente errónea (el grupo alto prefiere otra alternativa)" },
+  { a: 1.7, b: 2.8, note: "menor: muy difícil" },
+];
+
+const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
+
+/** Genera los primeros intentos simulados (puros, reproducibles con la semilla). */
+export function simulateDemoAttempts(items: SimItem[], count = 64, seed = 1135) {
+  const rnd = mulberry32(seed);
+  const attempts: { code: string; answers: { versionId: number; choice: string | null; score: number }[] }[] = [];
+  for (let s = 1; s <= count; s++) {
+    // Suma de uniformes: habilidad con forma de campana.
+    const ability = (rnd() + rnd() + rnd() + rnd() - 2) * 2.5 + 1.0;
+    const answers = items.map((it, k) => {
+      const pr = PROFILE[k] ?? { a: 1.5, b: 0, note: "" };
+      const theta = pr.flip ? -ability : ability;
+      const keyIdx = it.correct >= 0 ? it.correct : 0; // en V/F, 0 representa la respuesta correcta
+      let choiceIdx: number;
+      if (pr.trap !== undefined && rnd() < sigmoid(2.4 * (ability - 0.5)) * 0.85) {
+        choiceIdx = pr.trap; // el distractor atrae sobre todo a quienes más saben
+      } else if (rnd() < sigmoid(pr.a * (theta - pr.b))) {
+        choiceIdx = keyIdx;
+      } else {
+        const wrong = [...Array(it.nAlts).keys()].filter((i) => i !== keyIdx && i !== pr.unused && i !== pr.trap);
+        choiceIdx = wrong[Math.floor(rnd() * wrong.length)]!;
       }
-      await db.query(`INSERT INTO answer (attempt_id, item_version_id, choice, score) VALUES ($1,$2,$3,$4)`, [
-        attemptId,
-        it.versionId,
-        choice,
-        ok ? it.points : 0,
-      ]);
+      const ok = choiceIdx === keyIdx;
+      // Verdadero o falso: se guarda la marca V/F; selección múltiple: la letra original.
+      const choice = it.correct >= 0 ? LETTERS[choiceIdx]! : null;
+      return { versionId: it.versionId, choice, score: ok ? it.points : 0 };
+    });
+    attempts.push({ code: `EST-${String(s).padStart(3, "0")}`, answers });
+  }
+  return attempts;
+}
+
+async function simulateResponses(db: Db, instrumentId: number, items: SimItem[]) {
+  for (const at of simulateDemoAttempts(items)) {
+    const a = await db.query<{ id: number }>(`INSERT INTO attempt (instrument_id, student_code, source) VALUES ($1, $2, 'simulado') RETURNING id`, [instrumentId, at.code]);
+    for (const x of at.answers) {
+      await db.query(`INSERT INTO answer (attempt_id, item_version_id, choice, score) VALUES ($1,$2,$3,$4)`, [a.rows[0]!.id, x.versionId, x.choice, x.score]);
     }
   }
 }

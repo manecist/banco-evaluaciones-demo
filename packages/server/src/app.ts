@@ -119,7 +119,10 @@ export function createApp({ db, jwtSecret, allowDemoLogin, staticDir }: AppOptio
     return core.createInstrument(db, me(req), req.body);
   }));
   app.get("/api/instruments/:id", h(async (req) => core.getInstrument(db, me(req), idParam.parse(req.params.id))));
-  app.get("/api/instruments/:id/analysis", h(async (req) => core.analyzeInstrument(db, me(req), idParam.parse(req.params.id))));
+  app.get("/api/instruments/:id/analysis", h(async (req) => {
+    const source = z.enum(["simulado", "hojas", "moodle"]).optional().parse(req.query.source || undefined);
+    return core.analyzeInstrument(db, me(req), idParam.parse(req.params.id), source);
+  }));
 
   app.get("/api/export/moodle", h(async (req, res) => {
     const q = z.object({ instrumentId: z.coerce.number().int().optional(), itemIds: z.string().optional() }).parse(req.query);

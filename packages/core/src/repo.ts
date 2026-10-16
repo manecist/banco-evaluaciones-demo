@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { generateItems, reviewItem, simulatedProvider, simulatedReviewer, type AiRequest, type AiReviewRequest } from "./ai";
 import { analyzeItems, type AnswerRow } from "./analysis";
-import { LETTERS } from "./grading";
+import { LETTERS, scoreToGrade } from "./grading";
 import { parseMoodleResponses } from "./moodleResults";
 import { buildForms, gradeSheets, originalChoice, parseSheetsCsv, type FormName } from "./sheets";
 import { toMoodleXml } from "./moodle";
@@ -658,15 +658,19 @@ export async function exportMoodle(db: Db, user: User, opts: { instrumentId?: nu
   return { xml, count: versions.length, skipped };
 }
 
-export async function analyzeInstrument(db: Db, user: User, instrumentId: number) {
+export type ResultSource = "simulado" | "hojas" | "moodle";
+
+export async function analyzeInstrument(db: Db, user: User, instrumentId: number, source?: ResultSource) {
   assertCan(user, "analysis:read");
   const ins = await getInstrument(db, user, instrumentId);
   const settings = await getSettings(db);
+  const src = await db.query<Row>(`SELECT source, count(*)::int AS n FROM attempt WHERE instrument_id = $1 GROUP BY source`, [instrumentId]);
+  const sources = Object.fromEntries(src.rows.map((x) => [x.source, x.n])) as Partial<Record<ResultSource, number>>;
   const r = await db.query<Row>(
     `SELECT a.student_code, an.item_version_id, an.score, an.choice, v.points
      FROM answer an JOIN attempt a ON a.id = an.attempt_id JOIN item_version v ON v.id = an.item_version_id
-     WHERE a.instrument_id = $1`,
-    [instrumentId],
+     WHERE a.instrument_id = $1 AND ($2::text IS NULL OR a.source = $2)`,
+    [instrumentId, source ?? null],
   );
   const rows: AnswerRow[] = r.rows.map((x) => ({
     student: x.student_code,
@@ -676,15 +680,30 @@ export async function analyzeInstrument(db: Db, user: User, instrumentId: number
     choice: x.choice,
   }));
   const correctChoice: Record<number, string> = {};
+  const letters: Record<number, string[]> = {};
   for (const v of ins.items) {
     if (v.payload.type === "seleccion_multiple") {
       const idx = v.payload.alternatives.findIndex((a) => a.correct);
       correctChoice[v.id] = LETTERS[idx] ?? "A";
+      letters[v.id] = LETTERS.slice(0, v.payload.alternatives.length);
     }
   }
-  const stats = analyzeItems(rows, { minResponses: Number(settings.min_responses ?? 30), correctChoice });
+  const stats = analyzeItems(rows, { minResponses: Number(settings.min_responses ?? 30), correctChoice, letters });
   const students = new Set(rows.map((x) => x.student)).size;
-  return { instrument: ins, students, stats, correctChoice };
+  // Distribución de notas (1,0–7,0) sobre las preguntas con respuestas registradas.
+  const maxByItem = new Map(rows.map((x) => [x.itemId, x.max]));
+  const maxTotal = [...maxByItem.values()].reduce((a, b) => a + b, 0) || 1;
+  const totals = new Map<string, number>();
+  for (const x of rows) totals.set(x.student, (totals.get(x.student) ?? 0) + x.score);
+  const grades = [...totals.values()].map((t) => scoreToGrade(t, maxTotal, ins.exigency));
+  const buckets = [1, 2, 3, 4, 5, 6].map((from) => ({ from, to: from + 1, n: grades.filter((g) => g >= from && (from === 6 ? g <= 7 : g < from + 1)).length }));
+  const gradeDistribution = {
+    buckets,
+    below4: grades.filter((g) => g < 4).length,
+    from6: grades.filter((g) => g >= 6).length,
+    average: grades.length ? Math.round((grades.reduce((a, b) => a + b, 0) / grades.length) * 10) / 10 : 0,
+  };
+  return { instrument: ins, students, stats, correctChoice, sources, source: source ?? null, gradeDistribution };
 }
 
 /** Importa preguntas de una prueba antigua como BORRADORES del docente (luego siguen la visación normal). */
@@ -724,7 +743,7 @@ export async function saveSheetResults(db: Db, user: User, instrumentId: number,
   await db.tx(async (tx) => {
     for (const r of rows) {
       const a = await tx.query<Row>(
-        `INSERT INTO attempt (instrument_id, student_code) VALUES ($1, $2) ON CONFLICT (instrument_id, student_code) DO NOTHING RETURNING id`,
+        `INSERT INTO attempt (instrument_id, student_code, source) VALUES ($1, $2, 'hojas') ON CONFLICT (instrument_id, student_code) DO NOTHING RETURNING id`,
         [instrumentId, r.code],
       );
       if (!a.rows[0]) {
@@ -758,7 +777,7 @@ export async function saveMoodleResults(db: Db, user: User, instrumentId: number
   await db.tx(async (tx) => {
     for (const s of r.students) {
       const a = await tx.query<Row>(
-        `INSERT INTO attempt (instrument_id, student_code) VALUES ($1, $2) ON CONFLICT (instrument_id, student_code) DO NOTHING RETURNING id`,
+        `INSERT INTO attempt (instrument_id, student_code, source) VALUES ($1, $2, 'moodle') ON CONFLICT (instrument_id, student_code) DO NOTHING RETURNING id`,
         [instrumentId, s.code],
       );
       if (!a.rows[0]) { skipped++; continue; }

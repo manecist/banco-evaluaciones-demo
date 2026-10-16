@@ -84,7 +84,7 @@ Un banco de preguntas donde los docentes **escriben, revisan, reutilizan y anali
 | 🔀 **Formas A y B** | Preguntas y alternativas barajadas con semilla (reproducible), tabla de conversión a nota 1,0–7,0, pauta separada, impresión o PDF y exportación a **Moodle XML**. |
 | 🔄 **Integración con Moodle** | Ida y vuelta: la prueba se **envía a Moodle** (XML), los estudiantes la rinden en línea con **nota al instante**, y el **informe de respuestas vuelve al banco sin nombres ni correos**. Cada respuesta se calza con su pregunta aunque Moodle baraje el orden, y se actualiza el análisis. Guía paso a paso: [`GUIA-MOODLE.md`](GUIA-MOODLE.md). |
 | ⚡ **Corrección de hojas de respuesta** | Hoja imprimible para lector óptico. Se sube el archivo de marcas y el sistema **corrige en segundos**: notas, hojas a revisar a mano (doble marca, en blanco) y descarga de resultados. |
-| 📊 **Análisis de ítems** | Dificultad (p), discriminación (D, 27 %), punto biserial corregida, alertas **PRIORITARIAS** y distribución de alternativas por grupo alto y bajo. Se actualiza con las hojas corregidas. |
+| 📊 **Análisis de ítems** | Dificultad (p), discriminación (D, 27 %), punto biserial corregida y distribución de notas. Alertas con explicación: **PRIORITARIAS** (clave probablemente errónea, pregunta ambigua, discriminación negativa) y **menores** (muy fácil, muy difícil, distractor que nadie elige). Muestra el **origen de los datos** (simulados, hojas escaneadas, Moodle) y permite filtrar por cada uno. |
 
 ### 👥 Cada rol con su función
 
@@ -211,7 +211,7 @@ npm test                  # Vitest: núcleo y API
 npm run build:demo        # demo estático en docs/
 ```
 
-**39 pruebas automatizadas** sobre PostgreSQL real (PGlite). Cubren, entre otras cosas, la búsqueda tolerante, la inmutabilidad de versiones, las reglas de visación, la consulta a experto, los permisos por rol, la importación de pruebas antiguas, la corrección de hojas, la vuelta de resultados desde Moodle, el análisis de ítems y la API. **GitHub Actions** ejecuta en cada cambio la revisión de tipos, las pruebas, el build del demo y el build de la imagen Docker.
+**40 pruebas automatizadas** sobre PostgreSQL real (PGlite). Cubren, entre otras cosas, la búsqueda tolerante, la inmutabilidad de versiones, las reglas de visación, la consulta a experto, los permisos por rol, la importación de pruebas antiguas, la corrección de hojas, la vuelta de resultados desde Moodle, el análisis de ítems y la API. **GitHub Actions** ejecuta en cada cambio la revisión de tipos, las pruebas, el build del demo y el build de la imagen Docker.
 
 ---
 

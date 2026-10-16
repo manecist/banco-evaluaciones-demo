@@ -12,6 +12,23 @@ beforeAll(async () => {
 });
 afterAll(async () => db.close());
 
+describe("simulación del demo (semilla fija)", () => {
+  it("muestra 4 ítems sanos, 2 prioritarios de distinto tipo y 3 alertas menores distintas", async () => {
+    const a = await analyzeInstrument(db, paula, 1);
+    expect(a.sources).toEqual({ simulado: 64 });
+    const byPos = a.instrument.items.map((v) => a.stats.find((s) => s.itemId === v.id)!);
+    const text = (i: number) => byPos[i]!.alerts.join(" ");
+    expect([0, 1, 2, 3].every((i) => byPos[i]!.alerts.length === 0 && byPos[i]!.D >= 0.3)).toBe(true);
+    expect(text(4)).toMatch(/PRIORITARIO · Discriminación negativa/);
+    expect(text(7)).toMatch(/PRIORITARIO · Clave probablemente errónea/);
+    expect(text(5)).toMatch(/Distractor no funcional/);
+    expect(text(6)).toMatch(/Muy fácil/);
+    expect(text(8)).toMatch(/Muy difícil/);
+    expect(a.gradeDistribution.below4).toBeGreaterThan(10);
+    expect(a.gradeDistribution.from6).toBeGreaterThan(3);
+  });
+});
+
 describe("resultados de Moodle", () => {
   it("lee el informe en español, calza las preguntas y elimina datos personales", async () => {
     const ins = await getInstrument(db, paula, 1);
@@ -47,7 +64,11 @@ describe("resultados de Moodle", () => {
     const csv = simulatedMoodleCsv(ins.items, 10, 3);
     const before = (await analyzeInstrument(db, paula, 1)).students;
     expect((await saveMoodleResults(db, paula, 1, csv)).saved).toBe(10);
-    expect((await analyzeInstrument(db, paula, 1)).students).toBe(before + 10);
+    const all = await analyzeInstrument(db, paula, 1);
+    expect(all.students).toBe(before + 10);
+    expect(all.sources.moodle).toBe(10);
+    expect((await analyzeInstrument(db, paula, 1, "moodle")).students).toBe(10);
+    expect((await analyzeInstrument(db, paula, 1, "simulado")).students).toBe(64);
     expect((await saveMoodleResults(db, paula, 1, csv)).skipped).toBe(10);
     await expect(saveMoodleResults(db, paula, 1, "a,b\n1,2")).rejects.toThrow(/ninguna pregunta/);
   });

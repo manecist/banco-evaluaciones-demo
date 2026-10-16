@@ -176,6 +176,7 @@ CREATE TABLE attempt (
   id            serial PRIMARY KEY,
   instrument_id int NOT NULL REFERENCES instrument(id),
   student_code  text NOT NULL,           -- código anónimo, sin datos personales
+  source        text NOT NULL DEFAULT 'simulado' CHECK (source IN ('simulado','hojas','moodle')),
   UNIQUE (instrument_id, student_code)
 );
 

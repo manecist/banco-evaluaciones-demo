@@ -27,6 +27,8 @@ export interface ItemStats {
 export interface AnalysisOptions {
   minResponses: number;
   correctChoice?: Record<number, string>; // letra correcta por ítem (selección múltiple)
+  /** Letras disponibles por ítem (para detectar distractores que nadie elige). */
+  letters?: Record<number, string[]>;
 }
 
 function mean(xs: number[]): number {
@@ -95,17 +97,52 @@ export function analyzeItems(rows: AnswerRow[], opts: AnalysisOptions): ItemStat
       .sort((a, b) => a.choice.localeCompare(b.choice));
 
     const alerts: string[] = [];
+    const f2 = (x: number) => x.toFixed(2).replace(".", ",");
     if (n < opts.minResponses) {
       alerts.push(`Solo ${n} respuestas (mínimo ${opts.minResponses}): resultados referenciales.`);
     } else {
-      if (D < 0) alerts.push("PRIORITARIO: discriminación negativa (lo responden mejor quienes tienen peor resultado total).");
-      else if (D < 0.2) alerts.push("Discriminación baja (D < 0,20).");
-      if (p < 0.2) alerts.push("Muy difícil (p < 0,20).");
-      if (p > 0.9) alerts.push("Muy fácil (p > 0,90).");
       const correct = opts.correctChoice?.[itemId];
+      const key = choices.find((c) => c.choice === correct);
+      const keyHigh = key?.high ?? 0;
+      // El distractor que más atrae al grupo alto.
+      const rival = correct ? choices.filter((c) => c.choice !== correct).sort((a, b) => b.high - a.high)[0] : undefined;
+      let explained = false;
+
+      const highN = high.size;
+      const second = correct ? choices.filter((c) => c.choice !== correct && c.choice !== rival?.choice).reduce((m, c) => Math.max(m, c.high), 0) : 0;
+      // Clave errónea: UN distractor concentra al grupo alto (no un reparto al azar entre varios).
+      if (correct && rival && rival.high > keyHigh && rival.high >= highN * 0.4 && rival.high >= second * 2) {
+        alerts.push(
+          `PRIORITARIO · Clave probablemente errónea: en el grupo alto, ${rival.high} eligen la ${rival.choice} y solo ${keyHigh} la clave ${correct}. ` +
+            "Revise si la respuesta marcada es realmente la correcta antes de calificar.",
+        );
+        explained = true;
+      } else if (correct && rival && D >= 0 && keyHigh > 0 && rival.high >= keyHigh * 0.6 && rival.high > rival.low) {
+        alerts.push(
+          `PRIORITARIO · Pregunta ambigua: el grupo alto se reparte entre la clave ${correct} (${keyHigh}) y la ${rival.choice} (${rival.high}). ` +
+            "Puede haber dos respuestas defendibles: precise el enunciado o la alternativa.",
+        );
+        explained = true;
+      }
+      if (D < 0 && !explained) {
+        alerts.push(
+          `PRIORITARIO · Discriminación negativa (D = ${f2(D)}): la responden mejor quienes tienen peor resultado total. ` +
+            "Suele indicar un enunciado confuso o una trampa involuntaria.",
+        );
+      } else if (D >= 0 && D < 0.2 && !explained && p >= 0.2 && p <= 0.9) {
+        // En ítems extremos (muy fáciles o muy difíciles) la D baja es esperable y ya se informa.
+        alerts.push(`Discriminación baja (D = ${f2(D)}): distingue poco entre quienes dominan el tema y quienes no.`);
+      }
+      if (p < 0.2) alerts.push(`Muy difícil (p = ${f2(p)}): menos del 20 % la responde bien. Revise si el contenido se trabajó en clases o si la clave es correcta.`);
+      if (p > 0.9) alerts.push(`Muy fácil (p = ${f2(p)}): casi todos la responden bien, así que aporta poca información para distinguir niveles.`);
       if (correct) {
-        for (const c of choices) {
-          if (c.choice !== correct && c.high > c.low) alerts.push(`El distractor ${c.choice} lo eligen más en el grupo alto que en el bajo.`);
+        // En un ítem muy fácil casi nadie se equivoca: que sobren distractores es esperable.
+        const unused = p > 0.9 ? [] : (opts.letters?.[itemId] ?? []).filter((l) => l !== correct && !choices.some((c) => c.choice === l && c.total > 0));
+        for (const l of unused) alerts.push(`Distractor no funcional: la alternativa ${l} no la eligió nadie. Reemplácela por un error frecuente de los estudiantes.`);
+        if (!explained && D >= 0) {
+          for (const c of choices) {
+            if (c.choice !== correct && c.high >= 3 && c.high - c.low >= 2) alerts.push(`El distractor ${c.choice} lo eligen más en el grupo alto que en el bajo: revise si es parcialmente correcto.`);
+          }
         }
       }
     }

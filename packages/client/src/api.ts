@@ -43,9 +43,14 @@ export interface CareerSummary {
   instruments: { id: number; title: string; students: number; priority: number; alerts: number }[];
 }
 
+export type ResultSource = "simulado" | "hojas" | "moodle";
+
 export interface Analysis {
   instrument: InstrumentDetail;
   students: number;
+  sources: Partial<Record<ResultSource, number>>;
+  source: ResultSource | null;
+  gradeDistribution: { buckets: { from: number; to: number; n: number }[]; below4: number; from6: number; average: number };
   stats: ItemStats[];
   correctChoice: Record<number, string>;
 }
@@ -77,7 +82,7 @@ export interface Api {
   instruments(): Promise<InstrumentSummary[]>;
   instrument(id: number): Promise<InstrumentDetail>;
   createInstrument(input: InstrumentInput): Promise<InstrumentDetail>;
-  analysis(id: number): Promise<Analysis>;
+  analysis(id: number, source?: ResultSource): Promise<Analysis>;
   exportMoodle(opts: { instrumentId?: number; itemIds?: number[] }): Promise<string>;
   aiDraft(req: { moduleId: number; outcomeId: number; outcomeText: string; count: number; context: string }): Promise<AiResult>;
   aiReview(req: { stem: string; alternatives: { text: string; correct: boolean }[] }): Promise<AiReviewResult>;
@@ -138,7 +143,7 @@ export function createHttpApi(): Api {
     instruments: () => call("GET", "/api/instruments"),
     instrument: (id) => call("GET", `/api/instruments/${id}`),
     createInstrument: (i) => call("POST", "/api/instruments", i),
-    analysis: (id) => call("GET", `/api/instruments/${id}/analysis`),
+    analysis: (id, source) => call("GET", `/api/instruments/${id}/analysis${source ? `?source=${source}` : ""}`),
     exportMoodle: (o) => call("GET", `/api/export/moodle?${qs({ instrumentId: o.instrumentId, itemIds: o.itemIds?.join(",") })}`, undefined, true),
     aiDraft: (r) => call("POST", "/api/ai/draft", r),
     aiReview: (r) => call("POST", "/api/ai/review", r),
@@ -199,7 +204,7 @@ export async function createLocalApi(onProgress?: (msg: string) => void): Promis
     instruments: () => wrap(() => core.listInstruments(db, u())),
     instrument: (id) => wrap(() => core.getInstrument(db, u(), id)),
     createInstrument: (i) => wrap(() => core.createInstrument(db, u(), i)),
-    analysis: (id) => wrap(() => core.analyzeInstrument(db, u(), id)),
+    analysis: (id, source) => wrap(() => core.analyzeInstrument(db, u(), id, source)),
     exportMoodle: (o) => wrap(async () => (await core.exportMoodle(db, u(), o)).xml),
     aiDraft: (r) => wrap(() => core.aiDraftItems(db, u(), r)),
     aiReview: (r) => wrap(() => core.aiReviewItem(db, u(), r)),
